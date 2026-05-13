@@ -1,0 +1,78 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 👤 TABLE UTILISATEUR
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  name         String        // Pseudo de l'utilisateur
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  
+  // Relations : un utilisateur possède toutes ces données
+  stools       Stool[]
+  medications  Medication[]
+  appointments Appointment[]
+  labs         MedicalLab[]
+}
+
+// 💩 1. JOURNAL DES SELLES
+model Stool {
+  id        String   @id @default(uuid())
+  date      DateTime @default(now())
+  count     Int      @default(1)     // Le nombre (stepper)
+  bristol   Int                      // Échelle de Bristol (1 à 7)
+  blood     Boolean  @default(false) // Présence de sang (Toggle)
+  urgency   Boolean  @default(false) // Urgence / Faux besoins (Toggle)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// 💊 2. SUIVI DES MÉDICAMENTS / TRAITEMENTS
+model Medication {
+  id        String   @id @default(uuid())
+  date      DateTime @default(now()) // Date de la prise
+  name      String                   // Nom (Ex: Pentasa, Humira, Imurel...)
+  dosage    String?                  // Dosage (Ex: "2 comprimés", "1 injection")
+  taken     Boolean  @default(true)  // Pris ou manqué
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// 🏥 3. RENDEZ-VOUS MÉDICAUX
+model Appointment {
+  id        String   @id @default(uuid())
+  date      DateTime                 // Date et heure du RDV
+  doctor    String                   // Type (Ex: Gastro-entérologue, Généraliste)
+  notes     String?                  // Questions à poser, compte-rendu...
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// 🧪 4. ANALYSES CLINIQUES & BIOLOGIQUES (Le suivi des crises)
+model MedicalLab {
+  id             String   @id @default(uuid())
+  date           DateTime @default(now()) // Date de l'analyse ou du prélèvement
+  calprotectin   Float?                   // Calprotectine fécale (mg/kg) -> Optionnel si juste prise de sang
+  crp            Float?                   // Protéine C-Réactive (mg/L) -> Optionnel si juste selles
+  notes          String?                  // Remarques additionnelles
+  
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
