@@ -173,35 +173,47 @@ class Medication {
 class Appointment {
   final String id;
   final DateTime date;
-  final String time;
   final String doctor;
   final String location;
   final String type;
-  final bool isUpcoming;
+  final String? notes;
+  final String? preparation;
 
   const Appointment({
     required this.id,
     required this.date,
-    required this.time,
     required this.doctor,
     required this.location,
     required this.type,
-    required this.isUpcoming,
+    this.notes,
+    this.preparation,
   });
 
+  // Calcul dynamique pour l'affichage
   int get daysFromNow => date.difference(DateTime.now()).inDays;
+  bool get isUpcoming => date.isAfter(DateTime.now());
 
   factory Appointment.fromJson(Map<String, dynamic> json) {
     return Appointment(
       id: json['id'] as String,
       date: DateTime.parse(json['date'] as String),
-      time: json['time'] as String,
       doctor: json['doctor'] as String,
       location: json['location'] as String,
       type: json['type'] as String,
-      isUpcoming: json['isUpcoming'] as bool,
+      notes: json['notes'] as String?,
+      preparation: json['preparation'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson(String userId) => {
+    'date': date.toIso8601String(),
+    'doctor': doctor,
+    'location': location,
+    'type': type,
+    'notes': notes ?? "",
+    'preparation': preparation ?? "",
+    'userId': userId,
+  };
 }
 
 // ─── Analysis / Lab result ────────────────────────────────────────────────────

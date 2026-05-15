@@ -65,13 +65,16 @@ model MedicationLog {
 
 // 🏥 3. RENDEZ-VOUS MÉDICAUX
 model Appointment {
-  id        String   @id @default(uuid())
-  date      DateTime                 // Date et heure du RDV
-  doctor    String                   // Type (Ex: Gastro-entérologue, Généraliste)
-  notes     String?                  // Questions à poser, compte-rendu...
+  id          String   @id @default(uuid())
+  date        DateTime // Contient date + heure
+  doctor      String   // Nom du Dr ou Lab
+  location    String   // Lieu
+  type        String   // Motif du rdv
+  notes       String?  // Section "Voir les détails"
+  preparation String?  // Section "Préparer la visite"
   
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

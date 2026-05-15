@@ -201,6 +201,62 @@ const app = new Elysia()
 })
   )
 
+  // 🏥 GROUPE : RENDEZ-VOUS
+  .group("/appointment", (group) =>
+    group
+      .post("/", async ({ body, set }) => {
+  try {
+    console.log("📥 Données reçues :", body); // Pour voir ce qui arrive
+    
+    const newAppt = await prisma.appointment.create({
+      data: {
+        // On s'assure que la date est bien un objet Date
+        date: new Date(body.date), 
+        doctor: body.doctor,
+        location: body.location,
+        type: body.type,
+        // On utilise l'opérateur nullish pour éviter les "undefined"
+        notes: body.notes ?? null, 
+        preparation: body.preparation ?? null,
+        userId: body.userId,
+      },
+    });
+    
+    set.status = 201;
+    return newAppt;
+  } catch (error) {
+    console.error("❌ Erreur Prisma détaillée :", error); // TRÈS IMPORTANT
+    set.status = 500;
+    return { error: "Erreur serveur" };
+  }
+}, {
+        body: t.Object({
+          date: t.String(),
+          doctor: t.String(),
+          location: t.String(),
+          type: t.String(),
+          notes: t.Optional(t.String()),
+          preparation: t.Optional(t.String()),
+          userId: t.String()
+        })
+      })
+
+      .get("/user/:userId", async ({ params }) => {
+        const all = await prisma.appointment.findMany({
+          where: { userId: params.userId },
+          orderBy: { date: 'asc' }
+        });
+
+        const now = new Date();
+        return {
+          upcoming: all.filter(a => new Date(a.date) >= now),
+          past: all.filter(a => new Date(a.date) < now)
+                   .reverse() // Du plus récent au plus ancien
+                   .slice(0, 3) // On garde les 3 derniers
+        };
+      })
+  )
+
   .listen({
     port: 3000,
     hostname: '0.0.0.0'
