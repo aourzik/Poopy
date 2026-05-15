@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_router.dart';
 import '../../../shared/widgets/poopy_widgets.dart';
+import '../../auth/services/user_service.dart';
+import '../../../core/constants/app_constants.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -14,8 +16,11 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  String _currentUserName = "Chargement...";
+
   int? _selectedMood;
 
+  // Données statiques
   static const _moods = [
     (emoji: '😣', label: 'Crise', value: 1),
     (emoji: '😕', label: 'Difficile', value: 2),
@@ -24,16 +29,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     (emoji: '😄', label: 'Top', value: 5),
   ];
 
-  // Mock 7-day data (replace with real Riverpod state later)
   final _last7 = [
-    (day: 7, count: 1),
-    (day: 8, count: 0),
-    (day: 9, count: 2),
-    (day: 10, count: 1),
-    (day: 11, count: 4),
-    (day: 12, count: 1),
-    (day: 13, count: 2),
+    (day: 7, count: 1), (day: 8, count: 0), (day: 9, count: 2),
+    (day: 10, count: 1), (day: 11, count: 4), (day: 12, count: 1), (day: 13, count: 2),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final name = await UserService().getUserName(AppConstants.currentUserId);
+    if (mounted) {
+      setState(() {
+        _currentUserName = name;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +57,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        0, MediaQuery.of(context).padding.top + 56, 0, 140,
+        0, 
+        MediaQuery.of(context).padding.top + 20, 
+        0, 
+        140
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
+          // --- HEADER AVEC MASCOTTE ET NOTIFS ---
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 8, 22, 8),
             child: Row(
@@ -71,8 +88,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Transform.scale(
                       scale: 1.3,
                       child: Image.asset(
-                        'assets/poopy_logo_dash.png', // Ton logo en miniature
+                        'assets/poopy_logo_dash.png',
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.face), // Sécurité si l'image manque
                       ),
                     ),
                   ),
@@ -83,7 +101,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        // Capitalize first letter
                         dateStr[0].toUpperCase() + dateStr.substring(1),
                         style: TextStyle(
                           fontFamily: 'Quicksand', fontSize: 13,
@@ -91,17 +108,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       Text(
-                        'Coucou, Alex',
+                        'Coucou, $_currentUserName', // <-- TON NOM DYNAMIQUE ICI
                         style: TextStyle(
-                          fontFamily: 'Quicksand', fontSize: 24,
-                          fontWeight: FontWeight.w500, color: t.text,
+                          fontFamily: 'Quicksand', 
+                          fontSize: 24,
+                          fontWeight: FontWeight.w500, 
+                          color: t.text,
                           height: 1.1,
                         ),
                       ),
                     ],
                   ),
                 ),
-                // Bell
+                // Bell Notif
                 Stack(
                   children: [
                     Container(

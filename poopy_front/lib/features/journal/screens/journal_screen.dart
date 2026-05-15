@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
-import 'package:poopy/features/journal/models/stool_model.dart';
 
+// Fichiers locaux
+import 'package:poopy/features/journal/models/stool_model.dart';
+import 'package:poopy/features/journal/services/stool_service.dart';
+import 'package:poopy/core/constants/app_constants.dart';
+import '../../../../core/constants/app_constants.dart';
+
+// Design
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/poopy_widgets.dart';
-import '../widgets/bristol_scale.dart';
 import '../widgets/day_detail_card.dart';
 import '../widgets/add_entry_sheet.dart';
 
@@ -17,30 +22,64 @@ class JournalScreen extends StatefulWidget {
 }
 
 class _JournalScreenState extends State<JournalScreen> {
+  // Variables calendrier
+  CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  
+  // Nouvelles variables pour les données réelles
+  Map<DateTime, Stool> _entries = {};
+  bool _isLoading = true; // Pour afficher le loader au début
 
-  // Mock entries — unified using the global StoolMock model
-  final Map<DateTime, StoolMock> _entries = {
-    DateTime(2026, 5, 13): StoolMock(id: '1', bristol: 4, blood: false, urgency: true, count: 2, time: DateTime.now()),
-    DateTime(2026, 5, 12): StoolMock(id: '2', bristol: 3, blood: false, urgency: false, count: 1, time: DateTime.now()),
-    DateTime(2026, 5, 11): StoolMock(id: '3', bristol: 5, blood: true,  urgency: true,  count: 4, time: DateTime.now()),
-    DateTime(2026, 5, 10): StoolMock(id: '4', bristol: 3, blood: false, urgency: false, count: 1, time: DateTime.now()),
-    DateTime(2026, 5,  9): StoolMock(id: '5', bristol: 2, blood: false, urgency: false, count: 1, time: DateTime.now()),
-    DateTime(2026, 5,  7): StoolMock(id: '6', bristol: 4, blood: false, urgency: true,  count: 2, time: DateTime.now()),
-    DateTime(2026, 5,  6): StoolMock(id: '7', bristol: 5, blood: true,  urgency: true,  count: 3, time: DateTime.now()),
-    DateTime(2026, 5,  5): StoolMock(id: '8', bristol: 3, blood: false, urgency: false, count: 1, time: DateTime.now()),
-  };
+  @override
+  void initState() {
+    super.initState();
+    _refreshData(); // On charge les données dès l'ouverture
+  }
 
-  StoolMock? get _selectedEntry {
+  // Fonction magique qui va chercher tes données sur Neon
+  Future<void> _refreshData() async {
+    try {
+      print("🛰️ Synchronisation Neon en cours...");
+      
+      // On récupère les données
+      final stools = await StoolService().getStools(AppConstants.currentUserId);
+      print("📊 Serveur a renvoyé ${stools.length} selles.");
+
+      final Map<DateTime, Stool> loadedEntries = {};
+      
+      for (var s in stools) {
+      if (s.date != null) {
+        // .toLocal() est crucial ici pour gérer le décalage Neon/Téléphone
+        final localDate = s.date!.toLocal(); 
+        final dayKey = DateTime(localDate.year, localDate.month, localDate.day);
+        
+        loadedEntries[dayKey] = s;
+        print("📍 Point ajouté pour : $dayKey"); // Log de vérification
+      }
+    }
+
+      // On met à jour l'UI
+      setState(() {
+        _entries = loadedEntries;
+        _isLoading = false;
+      });
+      
+      print("✅ UI mise à jour avec ${loadedEntries.length} points sur le calendrier.");
+    } catch (e) {
+      print("❌ Erreur lors du refresh : $e");
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Stool? get _selectedEntry {
     final key = DateTime(
       _selectedDay.year, _selectedDay.month, _selectedDay.day,
     );
     return _entries[key];
   }
 
-  Color _colorForEntry(StoolMock e) {
+  Color _colorForEntry(Stool e) {
     if (e.blood) return AppColors.selles;
     if (e.bristol >= 5 || e.urgency) return AppColors.meds;
     if (e.bristol == 3 || e.bristol == 4) return AppColors.rdv;
@@ -50,6 +89,16 @@ class _JournalScreenState extends State<JournalScreen> {
   @override
   Widget build(BuildContext context) {
     final t = context.t;
+
+    // Si on charge, on affiche un rond qui tourne au milieu de l'écran
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: AppColors.selles,
+          strokeWidth: 3,
+        ),
+      );
+    }
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
@@ -202,26 +251,42 @@ class _JournalScreenState extends State<JournalScreen> {
                   markerBuilder: (context, day, events) {
                     final key = DateTime(day.year, day.month, day.day);
                     final entry = _entries[key];
-                    if (entry == null) return null;
-                    final color = _colorForEntry(entry);
-                    final isSelected = isSameDay(day, _selectedDay);
-                    return Positioned(
-                      bottom: 4,
+
+                      if (entry == null) return null;
+
+  // On détermine la couleur selon tes critères
+                      final color = _colorForEntry(entry);
+  
+  // LOG DE SÉCURITÉ : Pour être sûr que le code passe ici
+                      print("🎨 Dessin des points pour Bristol ${entry.bristol} le ${key.day}");
+
+                    return Container(
+                      alignment: Alignment.bottomCenter,
+                      padding: const EdgeInsets.only(bottom: 6),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: List.generate(
-                          entry.count.clamp(1, 3),
-                          (i) => Container(
-                            width: 5, height: 5,
-                            margin: const EdgeInsets.symmetric(horizontal: 1),
+                        children: [
+        // On dessine toujours au moins un point si l'entrée existe
+                          Container(
+                            width: 7,
+                            height: 7,
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Colors.white.withOpacity(1 - i * 0.3)
-                                  : color.withOpacity(1 - i * 0.3),
-                              shape: BoxShape.circle,
+                            color: color,
+                            shape: BoxShape.circle,
                             ),
                           ),
-                        ),
+        // Si urgence ou sang, on peut ajouter un deuxième point par exemple
+                          if (entry.blood || entry.urgency) 
+                            Container(
+                              width: 7,
+                              height: 7,
+                              margin: const EdgeInsets.only(left: 2),
+                              decoration: const BoxDecoration(
+                                color: Colors.orange, // Un point orange d'alerte
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                        ],
                       ),
                     );
                   },
@@ -314,8 +379,9 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  void _showAddSheet() {
-    showModalBottomSheet(
+  void _showAddSheet() async {
+    // On ajoute 'final result =' et on attend la fermeture avec 'await'
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -323,16 +389,16 @@ class _JournalScreenState extends State<JournalScreen> {
         date: _selectedDay,
         initial: _selectedEntry,
         onSave: (entry) {
-          setState(() {
-            final key = DateTime(
-              _selectedDay.year, _selectedDay.month, _selectedDay.day,
-            );
-            _entries[key] = entry;
-          });
-          Navigator.pop(context);
+          // Ce callback peut rester vide si ton service gère l'enregistrement
         },
       ),
     );
+
+    // ICI : On ne rafraîchit que si result est true (succès)
+    if (result == true) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      await _refreshData();
+    }
   }
 }
 

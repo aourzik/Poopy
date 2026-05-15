@@ -7,7 +7,7 @@ import '../../../shared/widgets/poopy_widgets.dart';
 
 class DayDetailCard extends StatelessWidget {
   final DateTime date;
-  final StoolMock entry;
+  final Stool entry;
   final VoidCallback onEdit;
 
   const DayDetailCard({

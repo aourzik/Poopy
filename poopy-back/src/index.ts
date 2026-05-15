@@ -1,12 +1,12 @@
 import { Elysia, t } from "elysia";
+import { cors } from '@elysiajs/cors';
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
 const connectionString = Bun.env.DATABASE_URL;
-
 if (!connectionString) {
-  console.error("❌ Erreur : La variable DATABASE_URL n'est pas définie.");
+  console.error("❌ Erreur : DATABASE_URL manquante.");
   process.exit(1);
 }
 
@@ -15,76 +15,106 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const app = new Elysia()
+  .use(cors())
   .get("/", () => ({ status: "Poopy API is running 💩" }))
 
-  // 👤 ROUTE 1 : Créer un utilisateur
-  .post("/user", async ({ body }) => {
-    let user = await prisma.user.findUnique({
-      where: { email: body.email }
-    });
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: body.email,
-          name: body.name
+  // ---------------------------------------------------------
+  // 👤 GROUPE : UTILISATEURS
+  // ---------------------------------------------------------
+  .group("/user", (group) => 
+    group
+      .post("/", async ({ body }) => {
+        let user = await prisma.user.findUnique({ where: { email: body.email } });
+        if (!user) {
+          user = await prisma.user.create({ data: { email: body.email, name: body.name } });
         }
+        return user;
+      }, {
+        body: t.Object({ email: t.String({ format: 'email' }), name: t.String() })
+      })
+      .get("/all-test", async () => await prisma.user.findMany())// Ta route test déplacée ici
+      .get("/:id", async ({ params }) => {
+        return await prisma.user.findUnique({
+          where: { id: params.id }
+        });
+      })
+  )
+
+
+ // ---------------------------------------------------------
+  // 💩 GROUPE : SELLES (STOOLS)
+  // ---------------------------------------------------------
+  .group("/stool", (group) =>
+    group
+      // 💩 ROUTE : Enregistrer (Créer) ou Modifier
+      .post("/", async ({ body, set }) => {
+  try {
+    const { id, userId, bristol, count, blood, urgency, date } = body;
+
+    // Détection ultra-sécurisée de l'ID
+    const isUpdate = id && id !== "" && id !== "null" && id !== "undefined";
+
+    if (isUpdate) {
+      console.log(`📝 Modification de la selle : ${id}`);
+      return await prisma.stool.update({
+        where: { id: id },
+        data: {
+          bristol,
+          count,
+          blood,
+          urgency,
+          date: date ? new Date(date) : undefined,
+        },
       });
-    }
+    } 
 
-    return { message: "Utilisateur prêt !", user };
-  }, {
-    body: t.Object({
-      email: t.String({ format: 'email' }),
-      name: t.String()
-    })
-  })
-
-  // 💩 ROUTE 2 : Enregistrer un épisode de selles
-  .post("/stool", async ({ body, set }) => {
-    // 1. On vérifie d'abord si l'utilisateur qui fait la demande existe bien en base
-    const userExists = await prisma.user.findUnique({
-      where: { id: body.userId }
-    });
-
-    if (!userExists) {
-      set.status = 404;
-      return { error: "Utilisateur non trouvé. Impossible d'enregistrer la selle." };
-    }
-
-    // 2. On crée l'enregistrement dans la table Stool
-    const newStool = await prisma.stool.create({
+    console.log(`🆕 Création d'une nouvelle selle pour l'user : ${userId}`);
+    return await prisma.stool.create({
       data: {
-        userId: body.userId,
-        bristol: body.bristol,
-        count: body.count,
-        blood: body.blood,
-        urgency: body.urgency
-      }
+        userId,
+        bristol,
+        count,
+        blood,
+        urgency,
+        date: date ? new Date(date) : new Date(),
+      },
     });
 
-    set.status = 201; // Statut HTTP: Created
-    return {
-      message: "Épisode de selles enregistré avec succès ! 💩",
-      stool: newStool
-    };
-  }, {
-    // Sécurité Elysia : On valide strictement tout ce qui entre
-    body: t.Object({
-      userId: t.String(),                       // L'ID de l'utilisateur (obligatoire)
-      bristol: t.Integer({ minimum: 1, maximum: 7 }), // Échelle de Bristol officielle (1 à 7)
-      count: t.Integer({ minimum: 1 }),         // Le nombre via ton stepper (minimum 1)
-      blood: t.Boolean(),                       // Présence de sang (true/false)
-      urgency: t.Boolean()                      // Faux besoins / Urgence (true/false)
-    })
+  } catch (error) {
+    console.error("❌ Erreur Prisma Stool:", error);
+    set.status = 500;
+    return { error: "Erreur lors de l'enregistrement" };
+  }
+}, {
+  body: t.Object({
+    id: t.Optional(t.String()),
+    userId: t.String(),
+    bristol: t.Integer(),
+    count: t.Integer(),
+    blood: t.Boolean(),
+    urgency: t.Boolean(),
+    date: t.Optional(t.String())
   })
+})
 
-  // 🔍 ROUTE TEMPORAIRE : Voir tous les utilisateurs et leurs IDs générés
-  .get("/users-test", async () => {
-    return await prisma.user.findMany();
-  })
+      // 🔥 ROUTE : Récupérer les selles d'un utilisateur
+      .get("/user/:userId", async ({ params, set }) => {
+        try {
+          return await prisma.stool.findMany({
+            where: { userId: params.userId },
+            orderBy: { date: 'desc' }
+          });
+        } catch (error) {
+          console.error("❌ Erreur Fetch Stools:", error);
+          set.status = 500;
+          return [];
+        }
+      })
+  )
 
-
-  .listen(3000);
-
-console.log(`🚀 Le serveur Poopy tourne sur http://localhost:${app.server?.port}`);
+  .listen({
+    port: 3000,
+    hostname: '0.0.0.0'
+  }, ({ hostname, port }) => {
+    console.log(`🚀 Serveur Poopy prêt sur http://${hostname}:${port}`);
+  });

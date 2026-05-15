@@ -6,11 +6,14 @@ import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/poopy_widgets.dart';
 import 'bristol_scale.dart';
+import '../models/stool_model.dart';
+import '../services/stool_service.dart';
+import '../../../../core/constants/app_constants.dart';
 
 class AddEntrySheet extends StatefulWidget {
   final DateTime date;
-  final StoolMock? initial;
-  final ValueChanged<StoolMock> onSave;
+  final Stool? initial;
+  final ValueChanged<Stool> onSave;
 
   const AddEntrySheet({
     super.key,
@@ -169,15 +172,34 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             // Save
             PoopyButton(
               label: 'Enregistrer',
-              color: AppColors.selles, // Pour qu'il soit rouge/corail
-              onPressed: () => widget.onSave(StoolMock(
-                id: widget.initial?.id ?? const Uuid().v4(),
-                bristol: _bristol,
-                blood: _blood,
-                urgency: _urgency,
-                count: _count,
-                time: widget.initial?.time ?? DateTime.now(),
-              )),
+              color: AppColors.selles,
+              onPressed: () async {
+    // 1. On prépare l'objet avec la DATE du calendrier
+                final stoolData = Stool(
+      // Si on modifie, on garde l'ID existant, sinon null (le serveur en créera un)
+                  id: widget.initial?.id, 
+                  userId: AppConstants.currentUserId,
+                  bristol: _bristol,
+                  count: _count,
+                  blood: _blood,
+                  urgency: _urgency,
+                  date: widget.date, // <--- C'EST CA QUI PERMET DE SAUVER POUR HIER !
+                );
+
+    // 2. On appelle le service (saveStool doit gérer l'ID interne)
+                final success = await StoolService().saveStool(stoolData);
+
+                if (success) {
+                  if (mounted) Navigator.pop(context, true);
+                  print("💩 Données synchronisées avec Neon !");
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Erreur de connexion au serveur ❌")),
+                    );
+                  }
+                }
+              },
             ),
           ],
         ),
