@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 // ─── Color tokens (from Claude Design) ────────────────────────────────────────
 
@@ -60,6 +59,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      fontFamily: 'Quicksand',
       scaffoldBackgroundColor: AppColors.bgLight,
       colorScheme: const ColorScheme.light(
         primary: AppColors.pinkDeep,
@@ -68,7 +68,7 @@ class AppTheme {
         onSurface: AppColors.textDark,
       ),
       textTheme: _textTheme,
-      cardTheme: const CardThemeData(
+      cardTheme: const CardTheme(
         color: AppColors.surfaceLight,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -94,58 +94,34 @@ class AppTheme {
 
   static TextTheme get _textTheme {
     return TextTheme(
-      displayLarge: GoogleFonts.quicksand(
-        fontSize: 68, fontWeight: FontWeight.w600,
-        color: AppColors.textDark, letterSpacing: -0.5,
+      // TON TITRE "POOPY" (Playwrite)
+      displayLarge: const TextStyle(
+        fontFamily: 'Playwrite', 
+        fontSize: 68, 
+        fontWeight: FontWeight.w400,
+        color: AppColors.textDark, 
+        letterSpacing: -0.5,
       ),
-      displayMedium: GoogleFonts.quicksand(
-        fontSize: 32, fontWeight: FontWeight.w500,
-        color: AppColors.textDark, letterSpacing: -0.5,
+      // TES TITRES DE PAGES (Playwrite ou Quicksand, selon tes goûts)
+      displayMedium: const TextStyle(
+        fontFamily: 'Playwrite',
+        fontSize: 38, 
+        fontWeight: FontWeight.w600,
+        color: AppColors.textDark, 
+        letterSpacing: -0.5,
       ),
-      displaySmall: GoogleFonts.quicksand(
-        fontSize: 26, fontWeight: FontWeight.w500,
-        color: AppColors.textDark,
-      ),
-      headlineLarge: GoogleFonts.quicksand(
-        fontSize: 24, fontWeight: FontWeight.w500,
-        color: AppColors.textDark,
-      ),
-      headlineMedium: GoogleFonts.quicksand(
-        fontSize: 20, fontWeight: FontWeight.w500,
-        color: AppColors.textDark,
-      ),
-      titleLarge: GoogleFonts.quicksand(
-        fontSize: 16, fontWeight: FontWeight.w700,
-        color: AppColors.textDark,
-      ),
-      titleMedium: GoogleFonts.quicksand(
-        fontSize: 14, fontWeight: FontWeight.w700,
-        color: AppColors.textDark,
-      ),
-      titleSmall: GoogleFonts.quicksand(
-        fontSize: 12, fontWeight: FontWeight.w700,
-        color: AppColors.textDim, letterSpacing: 0.5,
-      ),
-      bodyLarge: GoogleFonts.quicksand(
-        fontSize: 15, fontWeight: FontWeight.w500,
-        color: AppColors.textDark,
-      ),
-      bodyMedium: GoogleFonts.quicksand(
-        fontSize: 13.5, fontWeight: FontWeight.w500,
-        color: AppColors.textDim,
-      ),
-      bodySmall: GoogleFonts.quicksand(
-        fontSize: 11.5, fontWeight: FontWeight.w500,
-        color: AppColors.textMuted,
-      ),
-      labelLarge: GoogleFonts.quicksand(
-        fontSize: 15.5, fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
-      ),
-      labelSmall: GoogleFonts.quicksand(
-        fontSize: 11, fontWeight: FontWeight.w700,
-        letterSpacing: 2, color: AppColors.textDim,
-      ),
+      // TOUT LE RESTE PASSE EN QUICKSAND AUTOMATIQUEMENT
+      displaySmall: const TextStyle(fontSize: 26, fontWeight: FontWeight.w500, color: AppColors.textDark),
+      headlineLarge: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: AppColors.textDark),
+      headlineMedium: const TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.textDark),
+      titleLarge: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
+      titleMedium: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textDark),
+      titleSmall: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textDim, letterSpacing: 0.5),
+      bodyLarge: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textDark),
+      bodyMedium: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: AppColors.textDim),
+      bodySmall: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w500, color: AppColors.textMuted),
+      labelLarge: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+      labelSmall: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 2, color: AppColors.textDim),
     );
   }
 }

@@ -38,8 +38,38 @@ class MainShell extends StatelessWidget {
               ),
             ),
           ),
+          // 2. LA BULLE ROSE DU HAUT (Celle du Splash)
+          Positioned(
+            top: -80, left: -60, right: -60,
+            child: Container(
+              height: 320,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [AppColors.pink.withOpacity(0.2), Colors.transparent],
+                  radius: 0.65,
+                ),
+              ),
+            ),
+          ),
+
+          // 3. LA BULLE VIOLETTE DU BAS (Celle du Splash)
+          Positioned(
+            bottom: -60, right: -80,
+            child: Container(
+              width: 260, height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [AppColors.poids.withOpacity(0.13), Colors.transparent],
+                  radius: 0.7,
+                ),
+              ),
+            ),
+          ),
           // Content
-          child,
+          SafeArea(
+            child: child,
+          ),
           // Floating bottom nav
           Positioned(
             left: 12, right: 12, bottom: 18,

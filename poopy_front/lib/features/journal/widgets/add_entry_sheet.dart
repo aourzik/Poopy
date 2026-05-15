@@ -53,7 +53,7 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
       ),
       padding: EdgeInsets.fromLTRB(
         22, 18, 22,
-        MediaQuery.of(context).viewInsets.bottom + 24,
+        MediaQuery.of(context).viewInsets.bottom + 120,
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -167,38 +167,17 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             const SizedBox(height: 18),
 
             // Save
-            GestureDetector(
-              onTap: () => widget.onSave(StoolMock(
-                id: widget.initial?.id ?? Uuid().v4(), // Assure la compatibilité avec ton futur vrai service
+            PoopyButton(
+              label: 'Enregistrer',
+              color: AppColors.selles, // Pour qu'il soit rouge/corail
+              onPressed: () => widget.onSave(StoolMock(
+                id: widget.initial?.id ?? const Uuid().v4(),
                 bristol: _bristol,
                 blood: _blood,
                 urgency: _urgency,
                 count: _count,
                 time: widget.initial?.time ?? DateTime.now(),
               )),
-              child: Container(
-                width: double.infinity,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: AppColors.selles,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.selles.withOpacity(0.35),
-                      blurRadius: 22, offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text(
-                    'Enregistrer',
-                    style: TextStyle(
-                      fontFamily: 'Quicksand', fontSize: 15,
-                      fontWeight: FontWeight.w700, color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
             ),
           ],
         ),

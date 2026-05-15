@@ -143,7 +143,6 @@ class _SplashScreenState extends State<SplashScreen>
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: const Color(0xFFFEF7EF),
-                                    border: Border.all(color: t.text, width: 2),
                                     boxShadow: [
                                       BoxShadow(
                                         color: AppColors.pinkDeep.withOpacity(0.35),
@@ -157,9 +156,15 @@ class _SplashScreenState extends State<SplashScreen>
                                       ),
                                     ],
                                   ),
-                                  // TODO: Replace with your actual mascot image
-                                  // child: ClipOval(child: Image.asset('assets/images/mascot.png', fit: BoxFit.cover)),
-                                  child: const _MascotPlaceholder(),
+                                  child: ClipOval(
+                                    child: Transform.scale(
+                                      scale: 1.3,
+                                      child: Image.asset(
+                                        'assets/poopy_logo_dash.png',
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(height: 24),
                                 // App name

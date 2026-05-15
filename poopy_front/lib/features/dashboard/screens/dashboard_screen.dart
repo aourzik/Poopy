@@ -59,10 +59,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: const Color(0xFFFEF7EF),
-                    border: Border.all(
-                      color: Colors.black.withOpacity(0.14),
-                      width: 1.5,
-                    ),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.pinkDeep.withOpacity(0.3),
@@ -71,8 +67,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                  child: const Center(
-                    child: Text('💩', style: TextStyle(fontSize: 28)),
+                  child: ClipOval(
+                    child: Transform.scale(
+                      scale: 1.3,
+                      child: Image.asset(
+                        'assets/poopy_logo_dash.png', // Ton logo en miniature
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),
