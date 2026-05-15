@@ -38,16 +38,29 @@ model Stool {
 
 // 💊 2. SUIVI DES MÉDICAMENTS / TRAITEMENTS
 model Medication {
-  id        String   @id @default(uuid())
-  date      DateTime @default(now()) // Date de la prise
-  name      String                   // Nom (Ex: Pentasa, Humira, Imurel...)
-  dosage    String?                  // Dosage (Ex: "2 comprimés", "1 injection")
-  taken     Boolean  @default(true)  // Pris ou manqué
+  id           String   @id @default(uuid())
+  name         String   // Pentasa
+  dose         String   // 500 mg
+  frequency    String   // 2 comprimés · 3×/jour
+  totalToday   Int?     // 3 (le chiffre total prévu)
+  isInjection  Boolean  @default(false)
+  color        String   @default("amber") // coral, amber, green, etc.
   
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relation vers les prises réelles du jour
+  logs         MedicationLog[]
 
   @@index([userId])
+}
+
+// Nouvelle table pour enregistrer chaque clic sur "Marquer pris"
+model MedicationLog {
+  id           String     @id @default(uuid())
+  takenAt      DateTime   @default(now())
+  medicationId String
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
 }
 
 // 🏥 3. RENDEZ-VOUS MÉDICAUX

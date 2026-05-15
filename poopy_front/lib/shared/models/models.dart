@@ -1,3 +1,8 @@
+import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
+
+enum MedColor { coral, amber, green, blue, purple }
+
 // ─── User ─────────────────────────────────────────────────────────────────────
 
 class UserModel {
@@ -21,17 +26,20 @@ class UserModel {
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : 'A';
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    return UserModel(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      email: json['email'] as String,
-      diagnosis: json['diagnosis'] as String?,
-      diagnosisDate: json['diagnosisDate'] != null
-          ? DateTime.parse(json['diagnosisDate'] as String)
-          : null,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-    );
-  }
+  return UserModel(
+    id: json['id']?.toString() ?? '', // Sécurité si l'ID est manquant
+    name: json['name']?.toString() ?? 'Utilisateur Anonyme',
+    email: json['email']?.toString() ?? '',
+    diagnosis: json['diagnosis'] as String?,
+    diagnosisDate: json['diagnosisDate'] != null
+        ? DateTime.parse(json['diagnosisDate'] as String)
+        : null,
+    // Pour createdAt, Prisma renvoie souvent une String ISO8601, le parse est bon
+    createdAt: json['createdAt'] != null 
+        ? DateTime.parse(json['createdAt'] as String)
+        : DateTime.now(), 
+  );
+}
 
   Map<String, dynamic> toJson() => {
     'id': id, 'name': name, 'email': email,
@@ -106,47 +114,59 @@ enum StoolEntryStatus { ok, watch, alert, blood }
 // ─── Medication ───────────────────────────────────────────────────────────────
 
 class Medication {
-  final String id;
+  final String? id;
   final String name;
   final String dose;
   final String frequency;
-  final String nextDose;
-  final int takenToday;
-  final int? totalToday; // null = "as needed"
+  final int? totalToday;
+  final int takenToday; 
   final bool isInjection;
   final MedColor color;
 
-  const Medication({
-    required this.id,
+  Medication({
+    this.id,
     required this.name,
     required this.dose,
     required this.frequency,
-    required this.nextDose,
-    required this.takenToday,
     this.totalToday,
-    this.isInjection = false,
+    this.takenToday = 0,
+    required this.isInjection,
     required this.color,
   });
 
   factory Medication.fromJson(Map<String, dynamic> json) {
+    // CORRECTION ICI : On utilise 'logs' avec un S
+    final List logs = json['logs'] ?? []; 
+    
     return Medication(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      dose: json['dose'] as String,
-      frequency: json['frequency'] as String,
-      nextDose: json['nextDose'] as String,
-      takenToday: json['takenToday'] as int,
-      totalToday: json['totalToday'] as int?,
-      isInjection: json['isInjection'] as bool? ?? false,
-      color: MedColor.values.firstWhere(
-        (e) => e.name == json['color'],
-        orElse: () => MedColor.amber,
-      ),
+      id: json['id'],
+      name: json['name'] ?? '',
+      dose: json['dose'] ?? '',
+      frequency: json['frequency'] ?? '',
+      totalToday: json['totalToday'],
+      takenToday: logs.length, 
+      isInjection: json['isInjection'] ?? false,
+      color: _parseColor(json['color']),
+    );
+  }
+
+  Map<String, dynamic> toJson(String userId) => {
+    'name': name,
+    'dose': dose,
+    'frequency': frequency,
+    'totalToday': totalToday,
+    'isInjection': isInjection,
+    'color': color.name,
+    'userId': userId,
+  };
+
+  static MedColor _parseColor(String? colorName) {
+    return MedColor.values.firstWhere(
+      (e) => e.name == colorName,
+      orElse: () => MedColor.amber,
     );
   }
 }
-
-enum MedColor { coral, amber, green, blue, purple }
 
 // ─── Appointment ──────────────────────────────────────────────────────────────
 

@@ -112,6 +112,95 @@ const app = new Elysia()
       })
   )
 
+  // 💊 GROUPE : MÉDICAMENTS
+  .group("/medication", (group) =>
+    group
+      // 📝 Créer un nouveau médicament
+      .post("/", async ({ body, set }) => {
+        try {
+          return await prisma.medication.create({
+            data: {
+              name: body.name,
+              dose: body.dose,
+              frequency: body.frequency,
+              totalToday: body.totalToday,
+              isInjection: body.isInjection,
+              color: body.color,
+              userId: body.userId,
+            }
+          });
+        } catch (error) {
+          console.error("❌ Erreur Create Medication:", error);
+          set.status = 500;
+          return { error: "Impossible de créer le médicament" };
+        }
+      }, {
+        body: t.Object({
+          name: t.String(),
+          dose: t.String(),
+          frequency: t.String(),
+          totalToday: t.Optional(t.Integer()),
+          isInjection: t.Boolean(),
+          color: t.String(),
+          userId: t.String()
+        })
+      })
+
+      // 📈 Récupérer les médocs
+.get("/user/:userId", async ({ params, set }) => {
+  try {
+    const meds = await prisma.medication.findMany({
+      where: { userId: params.userId },
+      include: {
+        logs: {
+          where: {
+            takenAt: { gte: new Date(new Date().setHours(0,0,0,0)) }
+          }
+        }
+      }
+    });
+    return meds;
+  } catch (e) {
+    console.error("❌ Erreur GET:", e);
+    set.status = 500; return [];
+  }
+})
+
+// ✅ Action : Marquer comme pris
+.post("/log", async ({ body, set }) => {
+  try {
+    console.log("📝 Log pour medicationId:", body.medicationId);
+    return await prisma.medicationLog.create({
+      data: { medicationId: body.medicationId }
+    });
+  } catch (error) {
+    console.error("❌ Erreur Log:", error);
+    set.status = 500;
+    return { error: "Erreur" };
+  }
+}, {
+  body: t.Object({ medicationId: t.String() })
+})
+
+// 🗑️ Action : Supprimer
+.delete("/:id", async ({ params, set }) => {
+  try {
+    const { id } = params;
+    console.log("🗑️ Tentative de suppression du médoc:", id);
+    
+    // On utilise une transaction pour être sûr que tout part
+    return await prisma.$transaction([
+      prisma.medicationLog.deleteMany({ where: { medicationId: id } }),
+      prisma.medication.delete({ where: { id: id } })
+    ]);
+  } catch (error) {
+    console.error("❌ Erreur Suppression:", error);
+    set.status = 500;
+    return { error: "Erreur" };
+  }
+})
+  )
+
   .listen({
     port: 3000,
     hostname: '0.0.0.0'

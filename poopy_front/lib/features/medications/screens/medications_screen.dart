@@ -1,42 +1,53 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
+// Chemins vers le thème et les widgets partagés
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/poopy_widgets.dart';
 
-class MedicationsScreen extends StatelessWidget {
+// Chemin vers ton modèle partagé
+import '../../../shared/models/models.dart'; 
+
+// Chemins vers les fichiers dans le même dossier feature
+import '../services/medication_service.dart'; 
+import '../widgets/add_medication_sheet.dart';
+import '../../../core/constants/app_constants.dart';
+
+class MedicationsScreen extends StatefulWidget {
   const MedicationsScreen({super.key});
 
-  static const _meds = [
-    _MedData(
-      name: 'Pentasa', dose: '500 mg',
-      freq: '2 comprimés · 3×/jour',
-      next: '20:00', nextColor: AppColors.meds,
-      taken: 2, total: 3,
-      iconColor: AppColors.meds, isInjection: false,
-    ),
-    _MedData(
-      name: 'Imurel', dose: '50 mg',
-      freq: '1 comprimé · matin',
-      next: 'Demain · 08:00', nextColor: AppColors.rdv,
-      taken: 1, total: 1,
-      iconColor: AppColors.rdv, isInjection: false,
-    ),
-    _MedData(
-      name: 'Humira', dose: '40 mg',
-      freq: 'Injection · tous les 14j',
-      next: 'Lun. 18 mai', nextColor: AppColors.analyses,
-      taken: 0, total: 0,
-      iconColor: AppColors.analyses, isInjection: true,
-    ),
-    _MedData(
-      name: 'Spasfon', dose: '80 mg',
-      freq: 'Si besoin · max 6/j',
-      next: 'Au besoin', nextColor: AppColors.poids,
-      taken: 1, total: null,
-      iconColor: AppColors.poids, isInjection: false,
-    ),
-  ];
+  @override
+  State<MedicationsScreen> createState() => _MedicationsScreenState();
+}
+
+class _MedicationsScreenState extends State<MedicationsScreen> {
+  final MedicationService _service = MedicationService();
+  List<Medication> _meds = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+
+    final data = await _service.getMeds(AppConstants.currentUserId);
+    
+    print("💊 Nombre de médicaments chargés: ${data.length}");
+
+    if (!mounted) return;
+    setState(() {
+      _meds = data;
+      _isLoading = false;
+    });
+  }
+
+  int get _totalTaken => _meds.fold(0, (sum, item) => sum + item.takenToday);
+  int get _totalExpected => _meds.fold(0, (sum, item) => sum + (item.totalToday ?? 0));
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +87,7 @@ class MedicationsScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  _ComplianceRing(taken: 3, total: 4),
+                  _ComplianceRing(taken: _totalTaken, total: _totalExpected),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,16 +101,16 @@ class MedicationsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      const Text(
-                        '3/4 prises',
-                        style: TextStyle(
+                      Text(
+                        '$_totalTaken/$_totalExpected prises',
+                        style: const TextStyle(
                           fontFamily: 'Quicksand', fontSize: 22,
                           fontWeight: FontWeight.w500, color: Colors.white,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Prochaine prise dans 4h30',
+                        'Suivi en temps réel',
                         style: TextStyle(
                           fontFamily: 'Quicksand', fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -113,43 +124,50 @@ class MedicationsScreen extends StatelessWidget {
             ),
           ),
 
-          // Scan button
+          // Bouton Ajouter
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
-            child: Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                color: context.t.surface,
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: context.t.border,
-                  width: 1.5,
-                  strokeAlign: BorderSide.strokeAlignInside,
+            child: GestureDetector(
+              onTap: () async {
+                final result = await showModalBottomSheet<bool>(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const AddMedicationSheet(),
+                );
+                if (result == true) {
+                  _loadData(); 
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: context.t.surface,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: context.t.border, width: 1.5),
                 ),
-              ),
-              // Dashed border effect via CustomPaint
-              child: Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.document_scanner_outlined,
-                        size: 20, color: t.text),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Scanner une ordonnance',
-                      style: TextStyle(
-                        fontFamily: 'Quicksand', fontSize: 14,
-                        fontWeight: FontWeight.w700, color: t.text,
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_circle_outline_rounded, size: 20, color: t.text),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Ajouter un traitement',
+                        style: TextStyle(
+                          fontFamily: 'Quicksand', fontSize: 14,
+                          fontWeight: FontWeight.w700, color: t.text,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
 
-          // Meds list
+          // Liste des Médicaments (ICI MODIFIÉ POUR LE SWIPE)
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 0, 22, 0),
             child: Column(
@@ -166,10 +184,46 @@ class MedicationsScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                ..._meds.map((m) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _MedCard(med: m),
-                )),
+                if (_isLoading)
+                  const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                else if (_meds.isEmpty)
+                  const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("Aucun traitement enregistré")))
+                else
+                  ..._meds.map((m) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Dismissible(
+                      key: Key(m.id ?? UniqueKey().toString()),
+                      direction: DismissDirection.endToStart,
+                      confirmDismiss: (direction) async {
+                        // Optionnel : tu pourrais ajouter un dialogue de confirmation ici
+                        return true;
+                      },
+                      onDismissed: (direction) async {
+                        if (m.id != null) {
+                          await _service.deleteMedication(m.id!);
+                          _loadData(); // On recharge
+                        }
+                      },
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade400,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(Icons.delete_outline, color: Colors.white),
+                      ),
+                      child: _MedCard(
+                        med: m,
+                        onTaken: () async {
+                          if (m.id != null) {
+                            await _service.markAsTaken(m.id!);
+                            _loadData();
+                          }
+                        },
+                      ),
+                    ),
+                  )),
               ],
             ),
           ),
@@ -178,6 +232,7 @@ class MedicationsScreen extends StatelessWidget {
     );
   }
 }
+
 
 class _ComplianceRing extends StatelessWidget {
   final int taken;
@@ -215,7 +270,6 @@ class _RingPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 3;
 
-    // Background ring
     canvas.drawCircle(
       center, radius,
       Paint()
@@ -224,7 +278,6 @@ class _RingPainter extends CustomPainter {
         ..style = PaintingStyle.stroke,
     );
 
-    // Progress arc
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi / 2,
@@ -243,8 +296,9 @@ class _RingPainter extends CustomPainter {
 }
 
 class _MedCard extends StatefulWidget {
-  final _MedData med;
-  const _MedCard({required this.med});
+  final Medication med;
+  final VoidCallback onTaken;
+  const _MedCard({required this.med, required this.onTaken});
 
   @override
   State<_MedCard> createState() => _MedCardState();
@@ -257,6 +311,7 @@ class _MedCardState extends State<_MedCard> {
   Widget build(BuildContext context) {
     final t = context.t;
     final m = widget.med;
+    final color = _getColor(m.color);
 
     return PoopyCard(
       borderRadius: 20,
@@ -269,86 +324,45 @@ class _MedCardState extends State<_MedCard> {
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  // Icon
                   Container(
                     width: 48, height: 48,
                     decoration: BoxDecoration(
-                      color: m.iconColor.withOpacity(0.13),
+                      color: color.withOpacity(0.13),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: m.iconColor.withOpacity(0.2),
-                      ),
+                      border: Border.all(color: color.withOpacity(0.2)),
                     ),
                     child: Icon(
-                      m.isInjection
-                          ? Icons.auto_awesome_rounded
-                          : Icons.medication_rounded,
-                      size: 22, color: m.iconColor,
+                      m.isInjection ? Icons.auto_awesome_rounded : Icons.medication_rounded,
+                      size: 22, color: color,
                     ),
                   ),
                   const SizedBox(width: 14),
-                  // Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            Text(
-                              m.name,
-                              style: TextStyle(
-                                fontFamily: 'Quicksand', fontSize: 15.5,
-                                fontWeight: FontWeight.w700, color: t.text,
-                              ),
-                            ),
+                            Text(m.name, style: TextStyle(fontFamily: 'Quicksand', fontSize: 15.5, fontWeight: FontWeight.w700, color: t.text)),
                             const SizedBox(width: 8),
-                            Text(
-                              m.dose,
-                              style: TextStyle(
-                                fontFamily: 'Quicksand', fontSize: 11.5,
-                                fontWeight: FontWeight.w600, color: t.textDim,
-                              ),
-                            ),
+                            Text(m.dose, style: TextStyle(fontFamily: 'Quicksand', fontSize: 11.5, fontWeight: FontWeight.w600, color: t.textDim)),
                           ],
                         ),
-                        Text(
-                          m.freq,
-                          style: TextStyle(
-                            fontFamily: 'Quicksand', fontSize: 12,
-                            fontWeight: FontWeight.w500, color: t.textDim,
-                          ),
-                        ),
+                        Text(m.frequency, style: TextStyle(fontFamily: 'Quicksand', fontSize: 12, fontWeight: FontWeight.w500, color: t.textDim)),
                       ],
                     ),
                   ),
-                  // Next
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        'PROCHAINE',
-                        style: TextStyle(
-                          fontFamily: 'Quicksand', fontSize: 10.5,
-                          fontWeight: FontWeight.w700, letterSpacing: 0.4,
-                          color: t.textMuted,
-                        ),
-                      ),
-                      Text(
-                        m.next,
-                        style: TextStyle(
-                          fontFamily: 'Quicksand', fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: m.nextColor,
-                        ),
-                      ),
+                      Text('PRISES', style: TextStyle(fontFamily: 'Quicksand', fontSize: 10.5, fontWeight: FontWeight.w700, color: t.textMuted)),
+                      Text('${m.takenToday}/${m.totalToday ?? '∞'}', style: TextStyle(fontFamily: 'Quicksand', fontSize: 12.5, fontWeight: FontWeight.w700, color: color)),
                     ],
                   ),
                 ],
               ),
             ),
           ),
-
-          // Expanded actions
           AnimatedSize(
             duration: const Duration(milliseconds: 240),
             curve: Curves.easeInOut,
@@ -359,25 +373,16 @@ class _MedCardState extends State<_MedCard> {
                       children: [
                         Expanded(
                           child: GestureDetector(
-                            onTap: () {},
+                            onTap: widget.onTaken,
                             child: Container(
                               height: 40,
-                              decoration: BoxDecoration(
-                                color: m.iconColor,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
+                              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+                              child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.check_rounded, size: 16, color: Colors.white),
-                                  const SizedBox(width: 6),
-                                  const Text(
-                                    'Marquer pris',
-                                    style: TextStyle(
-                                      fontFamily: 'Quicksand', fontSize: 13,
-                                      fontWeight: FontWeight.w700, color: Colors.white,
-                                    ),
-                                  ),
+                                  Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                                  SizedBox(width: 6),
+                                  Text('Marquer pris', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
                                 ],
                               ),
                             ),
@@ -387,21 +392,8 @@ class _MedCardState extends State<_MedCard> {
                         Expanded(
                           child: Container(
                             height: 40,
-                            decoration: BoxDecoration(
-                              color: context.t.surface,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: context.t.border),
-                            ),
-                            child: Center(
-                              child: Text(
-                                'Reporter',
-                                style: TextStyle(
-                                  fontFamily: 'Quicksand', fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                  color: context.t.text,
-                                ),
-                              ),
-                            ),
+                            decoration: BoxDecoration(color: context.t.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: context.t.border)),
+                            child: Center(child: Text('Reporter', style: TextStyle(fontFamily: 'Quicksand', fontSize: 13, fontWeight: FontWeight.w700, color: context.t.text))),
                           ),
                         ),
                       ],
@@ -413,23 +405,14 @@ class _MedCardState extends State<_MedCard> {
       ),
     );
   }
-}
 
-class _MedData {
-  final String name;
-  final String dose;
-  final String freq;
-  final String next;
-  final Color nextColor;
-  final int taken;
-  final int? total;
-  final Color iconColor;
-  final bool isInjection;
-
-  const _MedData({
-    required this.name, required this.dose, required this.freq,
-    required this.next, required this.nextColor,
-    required this.taken, this.total,
-    required this.iconColor, required this.isInjection,
-  });
+  Color _getColor(MedColor c) {
+    switch (c) {
+      case MedColor.coral: return AppColors.selles;
+      case MedColor.amber: return AppColors.meds;
+      case MedColor.green: return AppColors.rdv;
+      case MedColor.blue: return AppColors.analyses;
+      case MedColor.purple: return AppColors.poids;
+    }
+  }
 }
