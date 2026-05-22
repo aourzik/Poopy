@@ -19,6 +19,7 @@ model User {
   medications  Medication[]
   appointments Appointment[]
   labs         MedicalLab[]
+  weights      Weight[]
 }
 
 // 💩 1. JOURNAL DES SELLES
@@ -89,6 +90,18 @@ model MedicalLab {
   
   userId         String
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// 📈 5. SUIVI DU POIDS
+model Weight {
+  id        String   @id @default(uuid())
+  value     Float    // Le poids de l'utilisateur (ex: 62.4)
+  date      DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }

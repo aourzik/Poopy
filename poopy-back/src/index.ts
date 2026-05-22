@@ -32,7 +32,7 @@ const app = new Elysia()
       }, {
         body: t.Object({ email: t.String({ format: 'email' }), name: t.String() })
       })
-      .get("/all-test", async () => await prisma.user.findMany())// Ta route test déplacée ici
+      .get("/all-test", async () => await prisma.user.findMany())
       .get("/:id", async ({ params }) => {
         return await prisma.user.findUnique({
           where: { id: params.id }
@@ -40,62 +40,61 @@ const app = new Elysia()
       })
   )
 
-
- // ---------------------------------------------------------
+  // ---------------------------------------------------------
   // 💩 GROUPE : SELLES (STOOLS)
   // ---------------------------------------------------------
   .group("/stool", (group) =>
     group
       // 💩 ROUTE : Enregistrer (Créer) ou Modifier
       .post("/", async ({ body, set }) => {
-  try {
-    const { id, userId, bristol, count, blood, urgency, date } = body;
+        try {
+          const { id, userId, bristol, count, blood, urgency, date } = body;
 
-    // Détection ultra-sécurisée de l'ID
-    const isUpdate = id && id !== "" && id !== "null" && id !== "undefined";
+          // Détection de l'ID pour mise à jour ou création
+          const isUpdate = id && id !== "" && id !== "null" && id !== "undefined";
 
-    if (isUpdate) {
-      console.log(`📝 Modification de la selle : ${id}`);
-      return await prisma.stool.update({
-        where: { id: id },
-        data: {
-          bristol,
-          count,
-          blood,
-          urgency,
-          date: date ? new Date(date) : undefined,
-        },
-      });
-    } 
+          if (isUpdate) {
+            console.log(`📝 Modification de la selle : ${id}`);
+            return await prisma.stool.update({
+              where: { id: id },
+              data: {
+                bristol,
+                count,
+                blood,
+                urgency,
+                date: date ? new Date(date) : undefined,
+              },
+            });
+          } 
 
-    console.log(`🆕 Création d'une nouvelle selle pour l'user : ${userId}`);
-    return await prisma.stool.create({
-      data: {
-        userId,
-        bristol,
-        count,
-        blood,
-        urgency,
-        date: date ? new Date(date) : new Date(),
-      },
-    });
+          console.log(`🆕 Création d'une nouvelle selle pour l'user : ${userId}`);
+          return await prisma.stool.create({
+            data: {
+              userId,
+              bristol,
+              count,
+              blood,
+              urgency,
+              date: date ? new Date(date) : new Date(),
+            },
+          });
 
-  } catch (error) {
-    console.error("❌ Erreur Prisma Stool:", error);
-    set.status = 500;
-    return { error: "Erreur lors de l'enregistrement" };
-  }
-}, {
-  body: t.Object({
-    id: t.Optional(t.String()),
-    userId: t.String(),
-    bristol: t.Integer(),
-    count: t.Integer(),
-    blood: t.Boolean(),
-    urgency: t.Boolean(),
-    date: t.Optional(t.String())
-  })
-})
+        } catch (error) {
+          console.error("❌ Erreur Prisma Stool:", error);
+          set.status = 500;
+          return { error: "Erreur lors de l'enregistrement" };
+        }
+      }, {
+        body: t.Object({
+          id: t.Optional(t.String()),
+          userId: t.String(),
+          bristol: t.Integer(),
+          count: t.Integer(),
+          blood: t.Boolean(),
+          urgency: t.Boolean(),
+          date: t.Optional(t.String())
+        })
+      })
 
       // 🔥 ROUTE : Récupérer les selles d'un utilisateur
       .get("/user/:userId", async ({ params, set }) => {
@@ -112,7 +111,9 @@ const app = new Elysia()
       })
   )
 
+  // ---------------------------------------------------------
   // 💊 GROUPE : MÉDICAMENTS
+  // ---------------------------------------------------------
   .group("/medication", (group) =>
     group
       // 📝 Créer un nouveau médicament
@@ -146,90 +147,90 @@ const app = new Elysia()
         })
       })
 
-      // 📈 Récupérer les médocs
-.get("/user/:userId", async ({ params, set }) => {
-  try {
-    const meds = await prisma.medication.findMany({
-      where: { userId: params.userId },
-      include: {
-        logs: {
-          where: {
-            takenAt: { gte: new Date(new Date().setHours(0,0,0,0)) }
-          }
+      // 📈 Récupérer les médocs avec logs du jour
+      .get("/user/:userId", async ({ params, set }) => {
+        try {
+          const meds = await prisma.medication.findMany({
+            where: { userId: params.userId },
+            include: {
+              logs: {
+                where: {
+                  takenAt: { gte: new Date(new Date().setHours(0,0,0,0)) }
+                }
+              }
+            }
+          });
+          return meds;
+        } catch (e) {
+          console.error("❌ Erreur GET:", e);
+          set.status = 500; 
+          return [];
         }
-      }
-    });
-    return meds;
-  } catch (e) {
-    console.error("❌ Erreur GET:", e);
-    set.status = 500; return [];
-  }
-})
+      })
 
-// ✅ Action : Marquer comme pris
-.post("/log", async ({ body, set }) => {
-  try {
-    console.log("📝 Log pour medicationId:", body.medicationId);
-    return await prisma.medicationLog.create({
-      data: { medicationId: body.medicationId }
-    });
-  } catch (error) {
-    console.error("❌ Erreur Log:", error);
-    set.status = 500;
-    return { error: "Erreur" };
-  }
-}, {
-  body: t.Object({ medicationId: t.String() })
-})
+      // ✅ Action : Marquer comme pris
+      .post("/log", async ({ body, set }) => {
+        try {
+          console.log("📝 Log pour medicationId:", body.medicationId);
+          return await prisma.medicationLog.create({
+            data: { medicationId: body.medicationId }
+          });
+        } catch (error) {
+          console.error("❌ Erreur Log:", error);
+          set.status = 500;
+          return { error: "Erreur" };
+        }
+      }, {
+        body: t.Object({ medicationId: t.String() })
+      })
 
-// 🗑️ Action : Supprimer
-.delete("/:id", async ({ params, set }) => {
-  try {
-    const { id } = params;
-    console.log("🗑️ Tentative de suppression du médoc:", id);
-    
-    // On utilise une transaction pour être sûr que tout part
-    return await prisma.$transaction([
-      prisma.medicationLog.deleteMany({ where: { medicationId: id } }),
-      prisma.medication.delete({ where: { id: id } })
-    ]);
-  } catch (error) {
-    console.error("❌ Erreur Suppression:", error);
-    set.status = 500;
-    return { error: "Erreur" };
-  }
-})
+      // 🗑️ Action : Supprimer
+      .delete("/:id", async ({ params, set }) => {
+        try {
+          const { id } = params;
+          console.log("🗑️ Tentative de suppression du médoc:", id);
+          
+          return await prisma.$transaction([
+            prisma.medicationLog.deleteMany({ where: { medicationId: id } }),
+            prisma.medication.delete({ where: { id: id } })
+          ]);
+        } catch (error) {
+          console.error("❌ Erreur Suppression:", error);
+          set.status = 500;
+          return { error: "Erreur" };
+        }
+      })
   )
 
+  // ---------------------------------------------------------
   // 🏥 GROUPE : RENDEZ-VOUS
+  // ---------------------------------------------------------
   .group("/appointment", (group) =>
     group
       .post("/", async ({ body, set }) => {
-  try {
-    console.log("📥 Données reçues :", body); // Pour voir ce qui arrive
-    
-    const newAppt = await prisma.appointment.create({
-      data: {
-        // On s'assure que la date est bien un objet Date
-        date: new Date(body.date), 
-        doctor: body.doctor,
-        location: body.location,
-        type: body.type,
-        // On utilise l'opérateur nullish pour éviter les "undefined"
-        notes: body.notes ?? null, 
-        preparation: body.preparation ?? null,
-        userId: body.userId,
-      },
-    });
-    
-    set.status = 201;
-    return newAppt;
-  } catch (error) {
-    console.error("❌ Erreur Prisma détaillée :", error); // TRÈS IMPORTANT
-    set.status = 500;
-    return { error: "Erreur serveur" };
-  }
-}, {
+        try {
+          console.log("📥 Données reçues :", body);
+          
+          const newAppt = await prisma.appointment.create({
+            data: {
+              date: new Date(body.date), 
+              doctor: body.doctor,
+              location: body.location,
+              type: body.type,
+              notes: body.notes ?? null, 
+              preparation: body.preparation ?? null,
+              userId: body.userId,
+            },
+          });
+          
+          set.status = 201;
+          return newAppt;
+        } catch (error) {
+          console.error("❌ Erreur Prisma détaillée :", error);
+          set.status = 500;
+          return { error: "Erreur serveur" };
+        }
+      }, {
         body: t.Object({
           date: t.String(),
           doctor: t.String(),
@@ -251,12 +252,59 @@ const app = new Elysia()
         return {
           upcoming: all.filter(a => new Date(a.date) >= now),
           past: all.filter(a => new Date(a.date) < now)
-                   .reverse() // Du plus récent au plus ancien
-                   .slice(0, 3) // On garde les 3 derniers
+                   .reverse() 
+                   .slice(0, 3) 
         };
       })
   )
 
+  // ---------------------------------------------------------
+  // 📈 GROUPE : POIDS (WEIGHT)
+  // ---------------------------------------------------------
+  .group("/weight", (group) =>
+    group
+      // 📝 Enregistrer une nouvelle pesée
+      .post("/", async ({ body, set }) => {
+        try {
+          console.log(`🆕 Enregistrement d'un nouveau poids pour : ${body.userId}`);
+          return await prisma.weight.create({
+            data: {
+              userId: body.userId,
+              value: body.value,
+              date: body.date ? new Date(body.date) : new Date(),
+            }
+          });
+        } catch (error) {
+          console.error("❌ Erreur Create Weight:", error);
+          set.status = 500;
+          return { error: "Impossible d'enregistrer le poids" };
+        }
+      }, {
+        body: t.Object({
+          userId: t.String(),
+          value: t.Number(),
+          date: t.Optional(t.String())
+        })
+      })
+
+      // 📊 Récupérer tout l'historique de poids d'un utilisateur
+      .get("/user/:userId", async ({ params, set }) => {
+        try {
+          return await prisma.weight.findMany({
+            where: { userId: params.userId },
+            orderBy: { date: 'asc' }
+          });
+        } catch (error) {
+          console.error("❌ Erreur Fetch Weights:", error);
+          set.status = 500;
+          return [];
+        }
+      })
+  )
+
+  // ---------------------------------------------------------
+  // 🚀 CONFIGURATION DU SERVEUR
+  // ---------------------------------------------------------
   .listen({
     port: 3000,
     hostname: '0.0.0.0'
