@@ -86,9 +86,52 @@ class _JournalScreenState extends State<JournalScreen> {
     return AppColors.poids;
   }
 
+  // Calcule automatiquement les statistiques pour le mois affiché (_focusedDay)
+  Map<String, dynamic> _calculateMonthStats() {
+    int totalEpisodes = 0;
+    int activeDaysCount = 0;
+    int daysWithBlood = 0;
+    int daysWithUrgency = 0;
+    double totalBristol = 0.0;
+    int bristolCount = 0;
+
+    // On récupère le mois et l'année de la page affichée sur le calendrier
+    final currentMonth = _focusedDay.month;
+    final currentYear = _focusedDay.year;
+
+    _entries.forEach((dateKey, stool) {
+      if (dateKey.month == currentMonth && dateKey.year == currentYear) {
+        // Un jour est "actif" s'il y a une entrée
+        activeDaysCount++;
+        
+        totalEpisodes += 1; 
+
+        if (stool.blood) daysWithBlood++;
+        if (stool.urgency) daysWithUrgency++;
+        
+        if (stool.bristol > 0) {
+          totalBristol += stool.bristol;
+          bristolCount++;
+        }
+      }
+    });
+
+    double avgBristol = bristolCount > 0 ? (totalBristol / bristolCount) : 0.0;
+
+    return {
+      'totalEpisodes': totalEpisodes.toString(),
+      'activeDays': '$activeDaysCount jour${activeDaysCount > 1 ? 's' : ''} actif${activeDaysCount > 1 ? 's' : ''}',
+      'avgBristol': avgBristol > 0 ? avgBristol.toStringAsFixed(1) : '-',
+      'daysWithBlood': daysWithBlood.toString(),
+      'daysWithUrgency': daysWithUrgency.toString(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.t;
+
+    final stats = _calculateMonthStats();
 
     // Si on charge, on affiche un rond qui tourne au milieu de l'écran
     if (_isLoading) {
@@ -351,22 +394,22 @@ class _JournalScreenState extends State<JournalScreen> {
                   children: [
                     _SummaryCard(
                       title: 'Total épisodes',
-                      value: '16',
-                      sub: '9 jours actifs',
+                      value: stats['totalEpisodes'], // Version propre
+                      sub: stats['activeDays'],
                     ),
                     _SummaryCard(
                       title: 'Bristol moyen',
-                      value: '3.6',
+                      value: stats['avgBristol'],
                       sub: 'idéal entre 3-4',
                     ),
                     _SummaryCard(
                       title: 'Jours avec sang',
-                      value: '3',
+                      value: stats['daysWithBlood'],
                       valueColor: AppColors.selles,
                     ),
                     _SummaryCard(
                       title: "Jours d'urgence",
-                      value: '4',
+                      value: stats['daysWithUrgency'],
                       valueColor: AppColors.meds,
                     ),
                   ],
