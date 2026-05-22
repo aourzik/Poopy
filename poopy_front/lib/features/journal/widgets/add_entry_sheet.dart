@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:poopy/features/journal/models/stool_model.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/poopy_widgets.dart';
 import 'bristol_scale.dart';
-import '../models/stool_model.dart';
 import '../services/stool_service.dart';
 import '../../../../core/constants/app_constants.dart';
 
@@ -55,7 +53,9 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
         ),
       ),
       padding: EdgeInsets.fromLTRB(
-        22, 18, 22,
+        22,
+        18,
+        22,
         MediaQuery.of(context).viewInsets.bottom + 120,
       ),
       child: SingleChildScrollView(
@@ -66,7 +66,8 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             // Handle
             Center(
               child: Container(
-                width: 36, height: 4,
+                width: 36,
+                height: 4,
                 decoration: BoxDecoration(
                   color: t.border,
                   borderRadius: BorderRadius.circular(2),
@@ -85,16 +86,20 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
                       Text(
                         dateStr.toUpperCase(),
                         style: TextStyle(
-                          fontFamily: 'Quicksand', fontSize: 11,
-                          fontWeight: FontWeight.w700, color: t.textMuted,
+                          fontFamily: 'Quicksand',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: t.textMuted,
                           letterSpacing: 0.5,
                         ),
                       ),
                       Text(
                         'Nouvelle entrée',
                         style: TextStyle(
-                          fontFamily: 'Quicksand', fontSize: 20,
-                          fontWeight: FontWeight.w500, color: t.text,
+                          fontFamily: 'Quicksand',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                          color: t.text,
                         ),
                       ),
                     ],
@@ -103,7 +108,8 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
-                    width: 32, height: 32,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       color: t.surface,
                       shape: BoxShape.circle,
@@ -120,8 +126,10 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             Text(
               'Forme · échelle de Bristol',
               style: TextStyle(
-                fontFamily: 'Quicksand', fontSize: 12,
-                fontWeight: FontWeight.w700, letterSpacing: 0.3,
+                fontFamily: 'Quicksand',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
                 color: t.textDim,
               ),
             ),
@@ -136,8 +144,10 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
             Text(
               "Nombre d'épisodes",
               style: TextStyle(
-                fontFamily: 'Quicksand', fontSize: 12,
-                fontWeight: FontWeight.w700, letterSpacing: 0.3,
+                fontFamily: 'Quicksand',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
                 color: t.textDim,
               ),
             ),
@@ -174,19 +184,20 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
               label: 'Enregistrer',
               color: AppColors.selles,
               onPressed: () async {
-    // 1. On prépare l'objet avec la DATE du calendrier
+                // 1. On prépare l'objet avec la DATE du calendrier
                 final stoolData = Stool(
-      // Si on modifie, on garde l'ID existant, sinon null (le serveur en créera un)
-                  id: widget.initial?.id, 
+                  // Si on modifie, on garde l'ID existant, sinon null (le serveur en créera un)
+                  id: widget.initial?.id,
                   userId: AppConstants.currentUserId,
                   bristol: _bristol,
                   count: _count,
                   blood: _blood,
                   urgency: _urgency,
-                  date: widget.date, // <--- C'EST CA QUI PERMET DE SAUVER POUR HIER !
+                  date: widget
+                      .date, // <--- C'EST CA QUI PERMET DE SAUVER POUR HIER !
                 );
 
-    // 2. On appelle le service (saveStool doit gérer l'ID interne)
+                // 2. On appelle le service (saveStool doit gérer l'ID interne)
                 final success = await StoolService().saveStool(stoolData);
 
                 if (success) {
@@ -195,7 +206,8 @@ class _AddEntrySheetState extends State<AddEntrySheet> {
                 } else {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Erreur de connexion au serveur ❌")),
+                      const SnackBar(
+                          content: Text("Erreur de connexion au serveur ❌")),
                     );
                   }
                 }

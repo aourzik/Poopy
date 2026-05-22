@@ -1,6 +1,3 @@
-import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
-
 enum MedColor { coral, amber, green, blue, purple }
 
 // ─── User ─────────────────────────────────────────────────────────────────────
@@ -26,27 +23,29 @@ class UserModel {
   String get initial => name.isNotEmpty ? name[0].toUpperCase() : 'A';
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-  return UserModel(
-    id: json['id']?.toString() ?? '', // Sécurité si l'ID est manquant
-    name: json['name']?.toString() ?? 'Utilisateur Anonyme',
-    email: json['email']?.toString() ?? '',
-    diagnosis: json['diagnosis'] as String?,
-    diagnosisDate: json['diagnosisDate'] != null
-        ? DateTime.parse(json['diagnosisDate'] as String)
-        : null,
-    // Pour createdAt, Prisma renvoie souvent une String ISO8601, le parse est bon
-    createdAt: json['createdAt'] != null 
-        ? DateTime.parse(json['createdAt'] as String)
-        : DateTime.now(), 
-  );
-}
+    return UserModel(
+      id: json['id']?.toString() ?? '', // Sécurité si l'ID est manquant
+      name: json['name']?.toString() ?? 'Utilisateur Anonyme',
+      email: json['email']?.toString() ?? '',
+      diagnosis: json['diagnosis'] as String?,
+      diagnosisDate: json['diagnosisDate'] != null
+          ? DateTime.parse(json['diagnosisDate'] as String)
+          : null,
+      // Pour createdAt, Prisma renvoie souvent une String ISO8601, le parse est bon
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
-    'id': id, 'name': name, 'email': email,
-    'diagnosis': diagnosis,
-    'diagnosisDate': diagnosisDate?.toIso8601String(),
-    'createdAt': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'name': name,
+        'email': email,
+        'diagnosis': diagnosis,
+        'diagnosisDate': diagnosisDate?.toIso8601String(),
+        'createdAt': createdAt.toIso8601String(),
+      };
 }
 
 // ─── Stool Entry ──────────────────────────────────────────────────────────────
@@ -90,16 +89,24 @@ class StoolEntry {
   }
 
   Map<String, dynamic> toJson() => {
-    'date': date.toIso8601String(),
-    'bristol': bristol, 'blood': blood,
-    'urgency': urgency, 'count': count, 'notes': notes,
-  };
+        'date': date.toIso8601String(),
+        'bristol': bristol,
+        'blood': blood,
+        'urgency': urgency,
+        'count': count,
+        'notes': notes,
+      };
 
   StoolEntry copyWith({
-    int? bristol, bool? blood, bool? urgency, int? count, String? notes,
+    int? bristol,
+    bool? blood,
+    bool? urgency,
+    int? count,
+    String? notes,
   }) {
     return StoolEntry(
-      id: id, date: date,
+      id: id,
+      date: date,
       bristol: bristol ?? this.bristol,
       blood: blood ?? this.blood,
       urgency: urgency ?? this.urgency,
@@ -119,7 +126,7 @@ class Medication {
   final String dose;
   final String frequency;
   final int? totalToday;
-  final int takenToday; 
+  final int takenToday;
   final bool isInjection;
   final MedColor color;
 
@@ -136,29 +143,29 @@ class Medication {
 
   factory Medication.fromJson(Map<String, dynamic> json) {
     // CORRECTION ICI : On utilise 'logs' avec un S
-    final List logs = json['logs'] ?? []; 
-    
+    final List logs = json['logs'] ?? [];
+
     return Medication(
       id: json['id'],
       name: json['name'] ?? '',
       dose: json['dose'] ?? '',
       frequency: json['frequency'] ?? '',
       totalToday: json['totalToday'],
-      takenToday: logs.length, 
+      takenToday: logs.length,
       isInjection: json['isInjection'] ?? false,
       color: _parseColor(json['color']),
     );
   }
 
   Map<String, dynamic> toJson(String userId) => {
-    'name': name,
-    'dose': dose,
-    'frequency': frequency,
-    'totalToday': totalToday,
-    'isInjection': isInjection,
-    'color': color.name,
-    'userId': userId,
-  };
+        'name': name,
+        'dose': dose,
+        'frequency': frequency,
+        'totalToday': totalToday,
+        'isInjection': isInjection,
+        'color': color.name,
+        'userId': userId,
+      };
 
   static MedColor _parseColor(String? colorName) {
     return MedColor.values.firstWhere(
@@ -206,14 +213,14 @@ class Appointment {
   }
 
   Map<String, dynamic> toJson(String userId) => {
-    'date': date.toIso8601String(),
-    'doctor': doctor,
-    'location': location,
-    'type': type,
-    'notes': notes ?? "",
-    'preparation': preparation ?? "",
-    'userId': userId,
-  };
+        'date': date.toIso8601String(),
+        'doctor': doctor,
+        'location': location,
+        'type': type,
+        'notes': notes ?? "",
+        'preparation': preparation ?? "",
+        'userId': userId,
+      };
 }
 
 // ─── Analysis / Lab result ────────────────────────────────────────────────────
@@ -254,3 +261,41 @@ class LabResult {
 }
 
 enum LabResultType { blood, calprotectin }
+
+// ─── Weight Model ────────────────────────────────────────────────────
+
+class Weight {
+  final String? id;
+  final String userId;
+  final double value;
+  final DateTime date;
+
+  Weight({
+    this.id,
+    required this.userId,
+    required this.value,
+    required this.date,
+  });
+
+  // Pour convertir les données de ta base Neon (JSON) en objet Flutter
+  factory Weight.fromJson(Map<String, dynamic> json) {
+    return Weight(
+      id: json['id']?.toString(),
+      userId: json['user_id'] ?? '',
+      value: (json['value'] is int)
+          ? (json['value'] as int).toDouble()
+          : (json['value'] as double? ?? 0.0),
+      date:
+          json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'user_id': userId,
+      'value': value,
+      'date': date.toIso8601String(),
+    };
+  }
+}

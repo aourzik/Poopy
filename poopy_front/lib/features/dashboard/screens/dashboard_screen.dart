@@ -14,13 +14,13 @@ import 'package:poopy/shared/widgets/poopy_widgets.dart';
 import 'package:poopy/features/auth/services/user_service.dart';
 import 'package:poopy/core/constants/app_constants.dart';
 import 'package:poopy/features/journal/services/stool_service.dart';
-import 'package:poopy/features/journal/models/stool_model.dart';
 import 'package:poopy/features/medications/services/medication_service.dart';
 import 'package:poopy/shared/models/models.dart';
 import 'package:poopy/features/appointments/services/appointment_service.dart';
+import 'package:poopy/features/weight/services/weight_service.dart';
 
 // 🌗 Import pour le themeProvider Riverpod
-import 'package:poopy/main.dart'; 
+import 'package:poopy/main.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -42,8 +42,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _totalMedsCount = 0;
   String _nextMedText = "Aucun traitement prévu";
 
+  String _currentWeight = 'N/C';
+  final WeightService _weightService = WeightService();
+
   Appointment? _nextAppointment;
-  final List<String> _monthsList = ['JANV.', 'FÉVR.', 'MARS', 'AVR.', 'MAI', 'JUIN', 'JUIL.', 'AOÛT', 'SEPT.', 'OCT.', 'NOV.', 'DÉC.'];
+  final List<String> _monthsList = [
+    'JANV.',
+    'FÉVR.',
+    'MARS',
+    'AVR.',
+    'MAI',
+    'JUIN',
+    'JUIL.',
+    'AOÛT',
+    'SEPT.',
+    'OCT.',
+    'NOV.',
+    'DÉC.'
+  ];
 
   String _healthTrend = "stable";
 
@@ -66,19 +82,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final userId = AppConstants.currentUserId;
       final name = await UserService().getUserName(userId);
       final stools = await StoolService().getStools(userId);
+      final weights = await _weightService.getWeights(userId);
       final now = DateTime.now();
-      
+
       int todayCount = 0;
       String todayDetail = "0 épisode";
-      
+
       for (var s in stools) {
         if (s.date != null) {
           final localDate = s.date!.toLocal();
-          if (localDate.year == now.year && localDate.month == now.month && localDate.day == now.day) {
+          if (localDate.year == now.year &&
+              localDate.month == now.month &&
+              localDate.day == now.day) {
             todayCount++;
-            todayDetail = "Bristol ${s.bristol}${s.urgency ? ' · urgence' : ''}";
+            todayDetail =
+                "Bristol ${s.bristol}${s.urgency ? ' · urgence' : ''}";
           }
         }
+      }
+
+      // ⚡️ ÉTAPE 1 COMPLÉTÉE : On extrait la valeur textuelle propre (sans le kg)
+      String weightDisplay = 'N/C';
+      if (weights.isNotEmpty) {
+        weightDisplay = '${weights.last.value}';
       }
 
       List<Map<String, dynamic>> tempLast7 = [];
@@ -87,9 +113,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         int countForDay = stools.where((s) {
           if (s.date == null) return false;
           final d = s.date!.toLocal();
-          return d.year == dayIndex.year && d.month == dayIndex.month && d.day == dayIndex.day;
+          return d.year == dayIndex.year &&
+              d.month == dayIndex.month &&
+              d.day == dayIndex.day;
         }).length;
-        
+
         tempLast7.add({'day': dayIndex.day, 'count': countForDay});
       }
 
@@ -109,7 +137,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final stoolsForDay = stools.where((s) {
           if (s.date == null) return false;
           final d = s.date!.toLocal();
-          return d.year == dayToCheck.year && d.month == dayToCheck.month && d.day == dayToCheck.day;
+          return d.year == dayToCheck.year &&
+              d.month == dayToCheck.month &&
+              d.day == dayToCheck.day;
         });
 
         if (stoolsForDay.isNotEmpty) {
@@ -117,7 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (hasHighBristol) {
             consecutiveHighBristolDays++;
           } else {
-            break; 
+            break;
           }
         }
       }
@@ -142,13 +172,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       Appointment? upcomingAppt;
       try {
-        final appointmentsMap = await AppointmentService().getAppointments(userId);
+        final appointmentsMap =
+            await AppointmentService().getAppointments(userId);
         List<Appointment> allAppointments = [];
         appointmentsMap.forEach((key, list) {
           allAppointments.addAll(list);
         });
 
-        final futureAppts = allAppointments.where((a) => a.date.isAfter(now)).toList();
+        final futureAppts =
+            allAppointments.where((a) => a.date.isAfter(now)).toList();
         if (futureAppts.isNotEmpty) {
           futureAppts.sort((a, b) => a.date.compareTo(b.date));
           upcomingAppt = futureAppts.first;
@@ -159,6 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (mounted) {
         setState(() {
+          _currentWeight = weightDisplay; // ⚡️ Affectation au state global
           _currentUserName = name;
           _todayStoolsCount = todayCount;
           _todayStoolsDetail = todayDetail;
@@ -186,12 +219,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (_isLoading) {
       return Center(
-        child: CircularProgressIndicator(color: AppColors.pinkDeep, strokeWidth: 3),
+        child: CircularProgressIndicator(
+            color: AppColors.pinkDeep, strokeWidth: 3),
       );
     }
 
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(0, MediaQuery.of(context).padding.top + 20, 0, 140),
+      padding: EdgeInsets.fromLTRB(
+          0, MediaQuery.of(context).padding.top + 20, 0, 140),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -201,14 +236,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Row(
               children: [
                 Container(
-                  width: 52, height: 52,
+                  width: 52,
+                  height: 52,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: const Color(0xFFFEF7EF),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.pinkDeep.withOpacity(0.3),
-                        blurRadius: 14, offset: const Offset(0, 4),
+                        blurRadius: 14,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -218,7 +255,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Image.asset(
                         'assets/poopy_logo_dash.png',
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.face),
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.face),
                       ),
                     ),
                   ),
@@ -231,15 +269,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Text(
                         dateStr[0].toUpperCase() + dateStr.substring(1),
                         style: TextStyle(
-                          fontFamily: 'Quicksand', fontSize: 13,
-                          fontWeight: FontWeight.w500, color: t.textDim,
+                          fontFamily: 'Quicksand',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: t.textDim,
                         ),
                       ),
                       Text(
                         'Coucou, $_currentUserName',
                         style: TextStyle(
-                          fontFamily: 'Quicksand', fontSize: 24,
-                          fontWeight: FontWeight.w500, color: t.text,
+                          fontFamily: 'Quicksand',
+                          fontSize: 24,
+                          fontWeight: FontWeight.w500,
+                          color: t.text,
                           height: 1.1,
                         ),
                       ),
@@ -251,19 +293,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   builder: (context, ref, child) {
                     return GestureDetector(
                       onTap: () {
-                        ref.read(themeProvider.notifier).state = 
+                        ref.read(themeProvider.notifier).state =
                             isDarkMode ? ThemeMode.light : ThemeMode.dark;
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
-                        width: 42, height: 42,
+                        width: 42,
+                        height: 42,
                         decoration: BoxDecoration(
-                          color: t.surface, shape: BoxShape.circle,
+                          color: t.surface,
+                          shape: BoxShape.circle,
                           border: Border.all(color: t.border),
                         ),
                         child: Icon(
-                          isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round, 
-                          size: 20, 
+                          isDarkMode
+                              ? Icons.wb_sunny_rounded
+                              : Icons.nightlight_round,
+                          size: 20,
                           color: isDarkMode ? Colors.amber : t.text,
                         ),
                       ),
@@ -283,8 +329,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   'Comment te sens-tu aujourd\'hui\u00a0?',
                   style: TextStyle(
-                    fontFamily: 'Quicksand', fontSize: 13,
-                    fontWeight: FontWeight.w600, color: t.textDim,
+                    fontFamily: 'Quicksand',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: t.textDim,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -299,7 +347,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           margin: const EdgeInsets.symmetric(horizontal: 3),
                           padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.pink.withOpacity(0.2) : t.surface,
+                            color: isSelected
+                                ? AppColors.pink.withOpacity(0.2)
+                                : t.surface,
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
                               color: isSelected ? AppColors.pinkDeep : t.border,
@@ -308,14 +358,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           child: Column(
                             children: [
-                              Text(m.emoji, style: const TextStyle(fontSize: 22)),
+                              Text(m.emoji,
+                                  style: const TextStyle(fontSize: 22)),
                               const SizedBox(height: 4),
                               Text(
                                 m.label,
                                 style: TextStyle(
-                                  fontFamily: 'Quicksand', fontSize: 10,
+                                  fontFamily: 'Quicksand',
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w600,
-                                  color: isSelected ? AppColors.pinkDeep : t.textDim,
+                                  color: isSelected
+                                      ? AppColors.pinkDeep
+                                      : t.textDim,
                                 ),
                               ),
                             ],
@@ -345,13 +399,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         Row(
                           children: const [
-                            Icon(Icons.menu_book_rounded, size: 16, color: Colors.white70),
+                            Icon(Icons.menu_book_rounded,
+                                size: 16, color: Colors.white70),
                             SizedBox(width: 8),
                             Text(
                               'JOURNAL · AUJOURD\'HUI',
                               style: TextStyle(
-                                fontFamily: 'Quicksand', fontSize: 13,
-                                fontWeight: FontWeight.w600, color: Colors.white,
+                                fontFamily: 'Quicksand',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
                                 letterSpacing: 0.3,
                               ),
                             ),
@@ -364,9 +421,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Text(
                               '$_todayStoolsCount',
                               style: const TextStyle(
-                                fontFamily: 'Quicksand', fontSize: 44,
-                                fontWeight: FontWeight.w700, color: Colors.white,
-                                letterSpacing: -1, height: 1,
+                                fontFamily: 'Quicksand',
+                                fontSize: 44,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: -1,
+                                height: 1,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -375,7 +435,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: Text(
                                 _todayStoolsCount > 1 ? 'épisodes' : 'épisode',
                                 style: TextStyle(
-                                  fontFamily: 'Quicksand', fontSize: 14,
+                                  fontFamily: 'Quicksand',
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white.withOpacity(0.92),
                                 ),
@@ -386,7 +447,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(
                           _todayStoolsDetail,
                           style: TextStyle(
-                            fontFamily: 'Quicksand', fontSize: 13,
+                            fontFamily: 'Quicksand',
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                             color: Colors.white.withOpacity(0.9),
                           ),
@@ -395,7 +457,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   SizedBox(
-                    width: 92, height: 60,
+                    width: 92,
+                    height: 60,
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: _dynamicLast7.asMap().entries.map((e) {
@@ -412,9 +475,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   child: Container(
                                     width: double.infinity,
                                     height: h.clamp(4.0, 50.0),
-                                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(isToday ? 1.0 : 0.42),
+                                      color: Colors.white
+                                          .withOpacity(isToday ? 1.0 : 0.42),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
@@ -424,8 +489,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text(
                                 '${e.value['day']}',
                                 style: TextStyle(
-                                  fontSize: 9, color: Colors.white.withOpacity(0.7),
-                                  fontWeight: FontWeight.w600, fontFamily: 'Quicksand',
+                                  fontSize: 9,
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Quicksand',
                                 ),
                               ),
                             ],
@@ -441,13 +508,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // --- RANGÉE POIDS + MÉDICAMENTS DYNAMIQUE ---
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 0),
             child: Row(
               children: [
                 Expanded(
                   child: PoopyCard(
                     backgroundColor: AppColors.poids,
-                    borderRadius: 24, padding: const EdgeInsets.all(16),
+                    borderRadius: 24,
+                    padding: const EdgeInsets.all(16),
+                    onTap: () async {
+                      // 🔄 Attente du retour utilisateur pour rafraîchir le UI
+                      await context.push(AppRoutes.weight);
+                      _loadAllDashboardData();
+                    },
                     child: SizedBox(
                       height: 144,
                       child: Column(
@@ -460,12 +533,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text(
                                 'POIDS',
                                 style: TextStyle(
-                                  fontFamily: 'Quicksand', fontSize: 12,
-                                  fontWeight: FontWeight.w700, letterSpacing: 0.5,
+                                  fontFamily: 'Quicksand',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
                                   color: Colors.white,
                                 ),
                               ),
-                              Icon(Icons.auto_awesome_rounded, size: 16, color: Colors.white),
+                              Icon(Icons.auto_awesome_rounded,
+                                  size: 16, color: Colors.white),
                             ],
                           ),
                           Column(
@@ -474,32 +550,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  const Text(
-                                    '62.4',
-                                    style: TextStyle(
-                                      fontFamily: 'Quicksand', fontSize: 30,
-                                      fontWeight: FontWeight.w700, color: Colors.white,
+                                  // ⚡️ CORRECTION MAJEURE : Rendu de la variable d'état dynamique !
+                                  Text(
+                                    _currentWeight,
+                                    style: const TextStyle(
+                                      fontFamily: 'Quicksand',
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
                                       letterSpacing: -0.5,
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                      'kg',
-                                      style: TextStyle(
-                                        fontFamily: 'Quicksand', fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white.withOpacity(0.9),
+                                  // N'affiche le suffixe 'kg' que si le poids est renseigné (différent de N/C)
+                                  if (_currentWeight != 'N/C')
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text(
+                                        'kg',
+                                        style: TextStyle(
+                                          fontFamily: 'Quicksand',
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white.withOpacity(0.9),
+                                        ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                               Text(
-                                '↗ +0.3 kg cette semaine',
+                                _currentWeight == 'N/C'
+                                    ? 'Aucune pesée'
+                                    : 'Suivi actif ↗',
                                 style: TextStyle(
-                                  fontFamily: 'Quicksand', fontSize: 11.5,
+                                  fontFamily: 'Quicksand',
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white.withOpacity(0.85),
                                 ),
@@ -515,7 +600,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: PoopyCard(
                     backgroundColor: AppColors.meds,
-                    borderRadius: 24, padding: const EdgeInsets.all(16),
+                    borderRadius: 24,
+                    padding: const EdgeInsets.all(16),
                     onTap: () => context.go(AppRoutes.medications),
                     child: SizedBox(
                       height: 144,
@@ -529,12 +615,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text(
                                 'MÉDICAMENTS',
                                 style: TextStyle(
-                                  fontFamily: 'Quicksand', fontSize: 12,
-                                  fontWeight: FontWeight.w700, letterSpacing: 0.5,
+                                  fontFamily: 'Quicksand',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
                                   color: Colors.white,
                                 ),
                               ),
-                              Icon(Icons.medication_rounded, size: 16, color: Colors.white),
+                              Icon(Icons.medication_rounded,
+                                  size: 16, color: Colors.white),
                             ],
                           ),
                           Column(
@@ -546,8 +635,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   Text(
                                     '$_takenMedsCount',
                                     style: const TextStyle(
-                                      fontFamily: 'Quicksand', fontSize: 30,
-                                      fontWeight: FontWeight.w700, color: Colors.white,
+                                      fontFamily: 'Quicksand',
+                                      fontSize: 30,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
                                       letterSpacing: -0.5,
                                     ),
                                   ),
@@ -557,7 +648,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     child: Text(
                                       '/ $_totalMedsCount pris',
                                       style: TextStyle(
-                                        fontFamily: 'Quicksand', fontSize: 13,
+                                        fontFamily: 'Quicksand',
+                                        fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white.withOpacity(0.9),
                                       ),
@@ -568,7 +660,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Text(
                                 _nextMedText,
                                 style: TextStyle(
-                                  fontFamily: 'Quicksand', fontSize: 11.5,
+                                  fontFamily: 'Quicksand',
+                                  fontSize: 11.5,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white.withOpacity(0.85),
                                   overflow: TextOverflow.ellipsis,
@@ -584,25 +677,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 14),
 
           // --- BANDEAU TENDANCE INTELLIGENT ---
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
             child: PoopyCard(
-              borderRadius: 20, padding: const EdgeInsets.all(16),
+              borderRadius: 20,
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Container(
-                    width: 38, height: 38,
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
-                      color: (_healthTrend == "en crise" ? AppColors.selles : AppColors.pink).withOpacity(0.2),
+                      color: (_healthTrend == "en crise"
+                              ? AppColors.selles
+                              : AppColors.pink)
+                          .withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
-                      _healthTrend == "en crise" ? Icons.warning_amber_rounded : Icons.auto_awesome_rounded, 
-                      size: 20, 
-                      color: _healthTrend == "en crise" ? AppColors.selles : AppColors.pinkDeep
-                    ),
+                        _healthTrend == "en crise"
+                            ? Icons.warning_amber_rounded
+                            : Icons.auto_awesome_rounded,
+                        size: 20,
+                        color: _healthTrend == "en crise"
+                            ? AppColors.selles
+                            : AppColors.pinkDeep),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -612,17 +714,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Text(
                           'Tendance $_healthTrend',
                           style: TextStyle(
-                            fontFamily: 'Quicksand', fontSize: 13,
-                            fontWeight: FontWeight.w700, color: context.t.text,
+                            fontFamily: 'Quicksand',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: context.t.text,
                           ),
                         ),
                         Text(
-                          _healthTrend == "en crise" 
+                          _healthTrend == "en crise"
                               ? 'Alerte : restes vigilant(e) et adaptes ton alimentation.'
                               : 'Bonne réponse au traitement actuel.',
                           style: TextStyle(
-                            fontFamily: 'Quicksand', fontSize: 11.5,
-                            fontWeight: FontWeight.w500, color: context.t.textDim,
+                            fontFamily: 'Quicksand',
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: context.t.textDim,
                           ),
                         ),
                       ],
@@ -645,33 +751,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Text(
                     'PROCHAIN RENDEZ-VOUS',
                     style: TextStyle(
-                      fontFamily: 'Quicksand', fontSize: 12,
-                      fontWeight: FontWeight.w700, letterSpacing: 0.5,
+                      fontFamily: 'Quicksand',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
                       color: context.t.textDim,
                     ),
                   ),
                 ),
                 PoopyCard(
-                  borderRadius: 22, padding: const EdgeInsets.all(16),
+                  borderRadius: 22,
+                  padding: const EdgeInsets.all(16),
                   onTap: () => context.go(AppRoutes.appointments),
                   child: _nextAppointment == null
                       ? Center(
                           child: Text(
                             "Aucun rendez-vous planifié",
-                            style: TextStyle(fontFamily: 'Quicksand', color: context.t.textDim),
+                            style: TextStyle(
+                                fontFamily: 'Quicksand',
+                                color: context.t.textDim),
                           ),
                         )
                       : Row(
                           children: [
                             Container(
-                              width: 56, height: 60,
+                              width: 56,
+                              height: 60,
                               decoration: BoxDecoration(
                                 color: AppColors.rdv,
                                 borderRadius: BorderRadius.circular(14),
                                 boxShadow: [
                                   BoxShadow(
                                     color: AppColors.rdv.withOpacity(0.35),
-                                    blurRadius: 14, offset: const Offset(0, 6),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 6),
                                   ),
                                 ],
                               ),
@@ -679,18 +792,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    _monthsList[_nextAppointment!.date.month - 1],
+                                    _monthsList[
+                                        _nextAppointment!.date.month - 1],
                                     style: const TextStyle(
-                                      fontFamily: 'Quicksand', fontSize: 10,
-                                      fontWeight: FontWeight.w700, color: Colors.white,
+                                      fontFamily: 'Quicksand',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
                                   Text(
                                     '${_nextAppointment!.date.day}',
                                     style: const TextStyle(
-                                      fontFamily: 'Quicksand', fontSize: 22,
-                                      fontWeight: FontWeight.w700, color: Colors.white,
+                                      fontFamily: 'Quicksand',
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
                                       height: 1,
                                     ),
                                   ),
@@ -705,21 +823,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   Text(
                                     _nextAppointment!.doctor,
                                     style: TextStyle(
-                                      fontFamily: 'Quicksand', fontSize: 14.5,
-                                      fontWeight: FontWeight.w700, color: context.t.text,
+                                      fontFamily: 'Quicksand',
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: context.t.text,
                                     ),
                                   ),
                                   Text(
                                     '${DateFormat('HH:mm').format(_nextAppointment!.date)} · ${_nextAppointment!.type}',
                                     style: TextStyle(
-                                      fontFamily: 'Quicksand', fontSize: 12.5,
-                                      fontWeight: FontWeight.w500, color: context.t.textDim,
+                                      fontFamily: 'Quicksand',
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: context.t.textDim,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            Icon(Icons.chevron_right_rounded, color: context.t.textMuted),
+                            Icon(Icons.chevron_right_rounded,
+                                color: context.t.textMuted),
                           ],
                         ),
                 ),

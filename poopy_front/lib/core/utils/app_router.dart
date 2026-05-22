@@ -9,6 +9,7 @@ import '../../features/journal/screens/journal_screen.dart';
 import '../../features/medications/screens/medications_screen.dart';
 import '../../features/appointments/screens/appointments_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/weight/screens/weight_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
 // Route names
@@ -24,6 +25,7 @@ class AppRoutes {
   static const medications = '/home/medications';
   static const appointments = '/home/appointments';
   static const profile = '/home/profile';
+  static const weight = '/home/weight';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -47,7 +49,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 position: Tween<Offset>(
                   begin: const Offset(0, 0.05),
                   end: Offset.zero,
-                ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+                ).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut)),
                 child: child,
               ),
             );
@@ -91,6 +94,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppRoutes.profile,
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ProfileScreen(),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.weight,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: WeightScreen(),
             ),
           ),
         ],

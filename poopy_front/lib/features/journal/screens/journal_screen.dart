@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:poopy/features/journal/models/stool_model.dart';
 import 'package:poopy/features/journal/services/stool_service.dart';
 import 'package:poopy/core/constants/app_constants.dart';
-import '../../../../core/constants/app_constants.dart';
 
 // Design
 import '../../../core/theme/app_theme.dart';
@@ -26,7 +25,7 @@ class _JournalScreenState extends State<JournalScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime _selectedDay = DateTime.now();
-  
+
   // Nouvelles variables pour les données réelles
   Map<DateTime, Stool> _entries = {};
   bool _isLoading = true; // Pour afficher le loader au début
@@ -41,31 +40,33 @@ class _JournalScreenState extends State<JournalScreen> {
   Future<void> _refreshData() async {
     try {
       print("🛰️ Synchronisation Neon en cours...");
-      
+
       // On récupère les données
       final stools = await StoolService().getStools(AppConstants.currentUserId);
       print("📊 Serveur a renvoyé ${stools.length} selles.");
 
       final Map<DateTime, Stool> loadedEntries = {};
-      
+
       for (var s in stools) {
-      if (s.date != null) {
-        // .toLocal() est crucial ici pour gérer le décalage Neon/Téléphone
-        final localDate = s.date!.toLocal(); 
-        final dayKey = DateTime(localDate.year, localDate.month, localDate.day);
-        
-        loadedEntries[dayKey] = s;
-        print("📍 Point ajouté pour : $dayKey"); // Log de vérification
+        if (s.date != null) {
+          // .toLocal() est crucial ici pour gérer le décalage Neon/Téléphone
+          final localDate = s.date!.toLocal();
+          final dayKey =
+              DateTime(localDate.year, localDate.month, localDate.day);
+
+          loadedEntries[dayKey] = s;
+          print("📍 Point ajouté pour : $dayKey"); // Log de vérification
+        }
       }
-    }
 
       // On met à jour l'UI
       setState(() {
         _entries = loadedEntries;
         _isLoading = false;
       });
-      
-      print("✅ UI mise à jour avec ${loadedEntries.length} points sur le calendrier.");
+
+      print(
+          "✅ UI mise à jour avec ${loadedEntries.length} points sur le calendrier.");
     } catch (e) {
       print("❌ Erreur lors du refresh : $e");
       setState(() => _isLoading = false);
@@ -74,7 +75,9 @@ class _JournalScreenState extends State<JournalScreen> {
 
   Stool? get _selectedEntry {
     final key = DateTime(
-      _selectedDay.year, _selectedDay.month, _selectedDay.day,
+      _selectedDay.year,
+      _selectedDay.month,
+      _selectedDay.day,
     );
     return _entries[key];
   }
@@ -103,12 +106,12 @@ class _JournalScreenState extends State<JournalScreen> {
       if (dateKey.month == currentMonth && dateKey.year == currentYear) {
         // Un jour est "actif" s'il y a une entrée
         activeDaysCount++;
-        
-        totalEpisodes += 1; 
+
+        totalEpisodes += 1;
 
         if (stool.blood) daysWithBlood++;
         if (stool.urgency) daysWithUrgency++;
-        
+
         if (stool.bristol > 0) {
           totalBristol += stool.bristol;
           bristolCount++;
@@ -120,7 +123,8 @@ class _JournalScreenState extends State<JournalScreen> {
 
     return {
       'totalEpisodes': totalEpisodes.toString(),
-      'activeDays': '$activeDaysCount jour${activeDaysCount > 1 ? 's' : ''} actif${activeDaysCount > 1 ? 's' : ''}',
+      'activeDays':
+          '$activeDaysCount jour${activeDaysCount > 1 ? 's' : ''} actif${activeDaysCount > 1 ? 's' : ''}',
       'avgBristol': avgBristol > 0 ? avgBristol.toStringAsFixed(1) : '-',
       'daysWithBlood': daysWithBlood.toString(),
       'daysWithUrgency': daysWithUrgency.toString(),
@@ -147,7 +151,10 @@ class _JournalScreenState extends State<JournalScreen> {
 
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
-        0, MediaQuery.of(context).padding.top + 56, 0, 140,
+        0,
+        MediaQuery.of(context).padding.top + 56,
+        0,
+        140,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,8 +172,10 @@ class _JournalScreenState extends State<JournalScreen> {
                       Text(
                         'Mes traces',
                         style: TextStyle(
-                          fontFamily: 'Quicksand', fontSize: 26,
-                          fontWeight: FontWeight.w500, color: t.text,
+                          fontFamily: 'Quicksand',
+                          fontSize: 26,
+                          fontWeight: FontWeight.w500,
+                          color: t.text,
                         ),
                       ),
                     ],
@@ -175,18 +184,21 @@ class _JournalScreenState extends State<JournalScreen> {
                 GestureDetector(
                   onTap: () => _showAddSheet(),
                   child: Container(
-                    width: 42, height: 42,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
                       color: AppColors.selles,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.selles.withOpacity(0.4),
-                          blurRadius: 16, offset: const Offset(0, 6),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                    child: const Icon(Icons.add_rounded,
+                        color: Colors.white, size: 22),
                   ),
                 ),
               ],
@@ -218,11 +230,14 @@ class _JournalScreenState extends State<JournalScreen> {
                   formatButtonVisible: false,
                   titleCentered: true,
                   titleTextStyle: TextStyle(
-                    fontFamily: 'Quicksand', fontSize: 19,
-                    fontWeight: FontWeight.w500, color: t.text,
+                    fontFamily: 'Quicksand',
+                    fontSize: 19,
+                    fontWeight: FontWeight.w500,
+                    color: t.text,
                   ),
                   leftChevronIcon: Container(
-                    width: 36, height: 36,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: t.surface,
                       borderRadius: BorderRadius.circular(12),
@@ -231,7 +246,8 @@ class _JournalScreenState extends State<JournalScreen> {
                     child: Icon(Icons.chevron_left_rounded, color: t.text),
                   ),
                   rightChevronIcon: Container(
-                    width: 36, height: 36,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: t.surface,
                       borderRadius: BorderRadius.circular(12),
@@ -242,40 +258,52 @@ class _JournalScreenState extends State<JournalScreen> {
                 ),
                 daysOfWeekStyle: DaysOfWeekStyle(
                   weekdayStyle: TextStyle(
-                    fontFamily: 'Quicksand', fontSize: 10.5,
-                    fontWeight: FontWeight.w700, color: t.textMuted,
+                    fontFamily: 'Quicksand',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: t.textMuted,
                     letterSpacing: 0.5,
                   ),
                   weekendStyle: TextStyle(
-                    fontFamily: 'Quicksand', fontSize: 10.5,
-                    fontWeight: FontWeight.w700, color: t.textMuted,
+                    fontFamily: 'Quicksand',
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: t.textMuted,
                     letterSpacing: 0.5,
                   ),
                 ),
                 calendarStyle: CalendarStyle(
                   defaultTextStyle: TextStyle(
-                    fontFamily: 'Quicksand', fontSize: 13,
-                    fontWeight: FontWeight.w500, color: t.text,
+                    fontFamily: 'Quicksand',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: t.text,
                   ),
                   weekendTextStyle: TextStyle(
-                    fontFamily: 'Quicksand', fontSize: 13,
-                    fontWeight: FontWeight.w500, color: t.text,
+                    fontFamily: 'Quicksand',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: t.text,
                   ),
                   todayTextStyle: TextStyle(
-                    fontFamily: 'Quicksand', fontSize: 13,
-                    fontWeight: FontWeight.w700, color: AppColors.pinkDeep,
+                    fontFamily: 'Quicksand',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.pinkDeep,
                   ),
                   todayDecoration: BoxDecoration(
                     border: Border.all(color: AppColors.pinkDeep, width: 1.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   selectedTextStyle: const TextStyle(
-                    fontFamily: 'Quicksand', fontSize: 13,
-                    fontWeight: FontWeight.w700, color: Colors.white,
+                    fontFamily: 'Quicksand',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
                   ),
                   selectedDecoration: BoxDecoration(
-                    color: isDark 
-                        ? AppColors.pinkDeep.withOpacity(0.3) 
+                    color: isDark
+                        ? AppColors.pinkDeep.withOpacity(0.3)
                         : AppColors.textDark.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -299,13 +327,14 @@ class _JournalScreenState extends State<JournalScreen> {
                     final key = DateTime(day.year, day.month, day.day);
                     final entry = _entries[key];
 
-                      if (entry == null) return null;
+                    if (entry == null) return null;
 
-  // On détermine la couleur selon tes critères
-                      final color = _colorForEntry(entry);
-  
-  // LOG DE SÉCURITÉ : Pour être sûr que le code passe ici
-                      print("🎨 Dessin des points pour Bristol ${entry.bristol} le ${key.day}");
+                    // On détermine la couleur selon tes critères
+                    final color = _colorForEntry(entry);
+
+                    // LOG DE SÉCURITÉ : Pour être sûr que le code passe ici
+                    print(
+                        "🎨 Dessin des points pour Bristol ${entry.bristol} le ${key.day}");
 
                     return Container(
                       alignment: Alignment.bottomCenter,
@@ -313,23 +342,24 @@ class _JournalScreenState extends State<JournalScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-        // On dessine toujours au moins un point si l'entrée existe
+                          // On dessine toujours au moins un point si l'entrée existe
                           Container(
                             width: 7,
                             height: 7,
                             decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
+                              color: color,
+                              shape: BoxShape.circle,
                             ),
                           ),
-        // Si urgence ou sang, on peut ajouter un deuxième point par exemple
-                          if (entry.blood || entry.urgency) 
+                          // Si urgence ou sang, on peut ajouter un deuxième point par exemple
+                          if (entry.blood || entry.urgency)
                             Container(
                               width: 7,
                               height: 7,
                               margin: const EdgeInsets.only(left: 2),
                               decoration: const BoxDecoration(
-                                color: Colors.orange, // Un point orange d'alerte
+                                color:
+                                    Colors.orange, // Un point orange d'alerte
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -382,8 +412,10 @@ class _JournalScreenState extends State<JournalScreen> {
                   child: Text(
                     'RÉSUMÉ DU MOIS',
                     style: TextStyle(
-                      fontFamily: 'Quicksand', fontSize: 12,
-                      fontWeight: FontWeight.w700, letterSpacing: 0.5,
+                      fontFamily: 'Quicksand',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
                       color: context.t.textDim,
                     ),
                   ),
@@ -461,14 +493,18 @@ class _LegendDot extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8, height: 8,
+          width: 8,
+          height: 8,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 5),
-        Text(label, style: TextStyle(
-          fontFamily: 'Quicksand', fontSize: 11,
-          fontWeight: FontWeight.w600, color: context.t.textDim,
-        )),
+        Text(label,
+            style: TextStyle(
+              fontFamily: 'Quicksand',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: context.t.textDim,
+            )),
       ],
     );
   }
@@ -492,8 +528,10 @@ class _EmptyDayCard extends StatelessWidget {
           Text(
             dateStr.toUpperCase(),
             style: TextStyle(
-              fontFamily: 'Quicksand', fontSize: 11,
-              fontWeight: FontWeight.w700, color: t.textMuted,
+              fontFamily: 'Quicksand',
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: t.textMuted,
               letterSpacing: 0.5,
             ),
           ),
@@ -501,8 +539,10 @@ class _EmptyDayCard extends StatelessWidget {
           Text(
             'Aucune entrée',
             style: TextStyle(
-              fontFamily: 'Quicksand', fontSize: 18,
-              fontWeight: FontWeight.w500, color: t.text,
+              fontFamily: 'Quicksand',
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: t.text,
             ),
           ),
           const SizedBox(height: 14),
@@ -522,8 +562,10 @@ class _EmptyDayCard extends StatelessWidget {
                   Text(
                     'Ajouter pour ce jour',
                     style: TextStyle(
-                      fontFamily: 'Quicksand', fontSize: 13,
-                      fontWeight: FontWeight.w700, color: Colors.white,
+                      fontFamily: 'Quicksand',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -558,21 +600,29 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(
-            fontFamily: 'Quicksand', fontSize: 11.5,
-            fontWeight: FontWeight.w600, color: t.textDim,
-          )),
+          Text(title,
+              style: TextStyle(
+                fontFamily: 'Quicksand',
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: t.textDim,
+              )),
           const Spacer(),
-          Text(value, style: TextStyle(
-            fontFamily: 'Quicksand', fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: valueColor ?? t.text,
-          )),
+          Text(value,
+              style: TextStyle(
+                fontFamily: 'Quicksand',
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: valueColor ?? t.text,
+              )),
           if (sub != null)
-            Text(sub!, style: TextStyle(
-              fontFamily: 'Quicksand', fontSize: 10.5,
-              fontWeight: FontWeight.w600, color: t.textMuted,
-            )),
+            Text(sub!,
+                style: TextStyle(
+                  fontFamily: 'Quicksand',
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: t.textMuted,
+                )),
         ],
       ),
     );
