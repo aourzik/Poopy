@@ -72,23 +72,29 @@ class _AddMedicationSheetState extends State<AddMedicationSheet> {
                 const SizedBox(height: 20),
 
                 // Champ Nom avec suggestions
-                Autocomplete<String>(
-                  optionsBuilder: (textEditingValue) {
-                    if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
-                    return _suggestions.where((s) => s.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                // Champ Nom avec suggestions synchronisé
+              Autocomplete<String>(
+                optionsBuilder: (textEditingValue) {
+                  if (textEditingValue.text.isEmpty) return const Iterable<String>.empty();
+                  return _suggestions.where((s) => s.toLowerCase().contains(textEditingValue.text.toLowerCase()));
                   },
-                  onSelected: (selection) => _nameController.text = selection,
-                  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
-                    return TextField(
-                      controller: controller,
-                      focusNode: focusNode,
-                      decoration: InputDecoration(
-                        labelText: 'Nom du médicament',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    );
-                  },
-                ),
+                onSelected: (selection) => _nameController.text = selection,
+                fieldViewBuilder: (context, autocompleteController, focusNode, onFieldSubmitted) {
+                  // 💡 TRÈS IMPORTANT : On synchronise à chaque fois que l'utilisateur écrit
+                  autocompleteController.addListener(() {
+                    _nameController.text = autocompleteController.text;
+                  });
+
+                  return TextField(
+                    controller: autocompleteController, // On garde celui du builder
+                    focusNode: focusNode,
+                    decoration: InputDecoration(
+                      labelText: 'Nom du médicament',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                },
+              ),
                 
                 const SizedBox(height: 16),
                 
