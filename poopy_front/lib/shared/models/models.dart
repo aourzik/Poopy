@@ -223,44 +223,56 @@ class Appointment {
       };
 }
 
-// ─── Analysis / Lab result ────────────────────────────────────────────────────
+// ─── Medical Lab Types ────────────────────────────────────────────────────────
 
-class LabResult {
+enum LabType { blood, calprotectin }
+
+// ─── Medical Lab Model ────────────────────────────────────────────────────────
+
+class MedicalLab {
   final String id;
-  final String name;
   final DateTime date;
-  final String lab;
-  final String tag;
-  final bool isNormal;
-  final LabResultType type;
+  final double? calprotectin;
+  final double? crp;
+  final String? notes;
+  final String userId;
+  final LabType type; // Ajout du type pour faciliter le filtrage
 
-  const LabResult({
+  const MedicalLab({
     required this.id,
-    required this.name,
     required this.date,
-    required this.lab,
-    required this.tag,
-    required this.isNormal,
+    this.calprotectin,
+    this.crp,
+    this.notes,
+    required this.userId,
     required this.type,
   });
 
-  factory LabResult.fromJson(Map<String, dynamic> json) {
-    return LabResult(
+  factory MedicalLab.fromJson(Map<String, dynamic> json) {
+    return MedicalLab(
       id: json['id'] as String,
-      name: json['name'] as String,
       date: DateTime.parse(json['date'] as String),
-      lab: json['lab'] as String,
-      tag: json['tag'] as String,
-      isNormal: json['isNormal'] as bool,
-      type: LabResultType.values.firstWhere(
+      calprotectin: json['calprotectin'] != null ? (json['calprotectin'] as num).toDouble() : null,
+      crp: json['crp'] != null ? (json['crp'] as num).toDouble() : null,
+      notes: json['notes'] as String?,
+      userId: json['userId'] as String,
+      // Conversion automatique du type via le nom
+      type: LabType.values.firstWhere(
         (e) => e.name == json['type'],
-        orElse: () => LabResultType.blood,
+        orElse: () => LabType.blood,
       ),
     );
   }
-}
 
-enum LabResultType { blood, calprotectin }
+  Map<String, dynamic> toJson() => {
+    'userId': userId,
+    'calprotectin': calprotectin,
+    'crp': crp,
+    'notes': notes,
+    'date': date.toIso8601String(),
+    'type': type.name,
+  };
+}
 
 // ─── Weight Model ────────────────────────────────────────────────────
 

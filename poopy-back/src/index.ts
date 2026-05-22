@@ -303,6 +303,55 @@ const app = new Elysia()
   )
 
   // ---------------------------------------------------------
+  // 🧪 GROUPE : ANALYSES MEDICALES (LABS)
+  // ---------------------------------------------------------
+  .group("/lab", (group) =>
+    group
+      // 📝 Enregistrer une analyse
+      .post("/", async ({ body, set }) => {
+        try {
+          return await prisma.medicalLab.create({
+            data: {
+              userId: body.userId,
+              crp: body.crp ?? null,
+              calprotectin: body.calprotectin ?? null,
+              type: body.type, // <-- Ajoute bien ce champ
+              notes: body.notes ?? null,
+              date: body.date ? new Date(body.date) : new Date(),
+            }
+          });
+        } catch (error) {
+          console.error("❌ Erreur:", error);
+          set.status = 500;
+          return { error: "Erreur lors de l'enregistrement" };
+        }
+      }, {
+        body: t.Object({
+          userId: t.String(),
+          crp: t.Optional(t.Number()),
+          calprotectin: t.Optional(t.Number()),
+          type: t.String(), 
+          notes: t.Optional(t.String()),
+          date: t.Optional(t.String())
+        })
+      })
+
+      // 📊 Récupérer toutes les analyses d'un utilisateur
+      .get("/user/:userId", async ({ params, set }) => {
+        try {
+          return await prisma.medicalLab.findMany({
+            where: { userId: params.userId },
+            orderBy: { date: 'desc' } // De la plus récente à la plus ancienne
+          });
+        } catch (error) {
+          console.error("❌ Erreur Fetch Labs:", error);
+          set.status = 500;
+          return [];
+        }
+      })
+  )
+
+  // ---------------------------------------------------------
   // 🚀 CONFIGURATION DU SERVEUR
   // ---------------------------------------------------------
   .listen({
