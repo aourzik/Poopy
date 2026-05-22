@@ -131,6 +131,8 @@ class _JournalScreenState extends State<JournalScreen> {
   Widget build(BuildContext context) {
     final t = context.t;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final stats = _calculateMonthStats();
 
     // Si on charge, on affiche un rond qui tourne au milieu de l'écran
@@ -272,7 +274,9 @@ class _JournalScreenState extends State<JournalScreen> {
                     fontWeight: FontWeight.w700, color: Colors.white,
                   ),
                   selectedDecoration: BoxDecoration(
-                    color: t.text,
+                    color: isDark 
+                        ? AppColors.pinkDeep.withOpacity(0.3) 
+                        : AppColors.textDark.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   markerDecoration: const BoxDecoration(

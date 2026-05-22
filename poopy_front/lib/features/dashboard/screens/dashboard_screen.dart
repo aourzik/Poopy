@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/app_router.dart';
-import '../../../shared/widgets/poopy_widgets.dart';
-import '../../auth/services/user_service.dart';
-import '../../../core/constants/app_constants.dart';
-import '../../journal/services/stool_service.dart';
-import '../../journal/models/stool_model.dart';
-import '../../medications/services/medication_service.dart';
-import '../../../shared/models/models.dart';
-import '../../appointments/services/appointment_service.dart';
+// 🎨 Import absolu de ton thème
+import 'package:poopy/core/theme/app_theme.dart';
 
+// 🗺️ Import du routeur et des widgets partagés
+import 'package:poopy/core/utils/app_router.dart';
+import 'package:poopy/shared/widgets/poopy_widgets.dart';
+
+// 📡 Import des services et modèles de données
+import 'package:poopy/features/auth/services/user_service.dart';
+import 'package:poopy/core/constants/app_constants.dart';
+import 'package:poopy/features/journal/services/stool_service.dart';
+import 'package:poopy/features/journal/models/stool_model.dart';
+import 'package:poopy/features/medications/services/medication_service.dart';
+import 'package:poopy/shared/models/models.dart';
+import 'package:poopy/features/appointments/services/appointment_service.dart';
+
+// 🌗 Import pour le themeProvider Riverpod
+import 'package:poopy/main.dart'; 
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -53,23 +61,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadAllDashboardData();
   }
 
-  Future<void> _loadUserName() async {
-    final name = await UserService().getUserName(AppConstants.currentUserId);
-    if (mounted) {
-      setState(() {
-        _currentUserName = name;
-      });
-    }
-  }
-
   Future<void> _loadAllDashboardData() async {
     try {
       final userId = AppConstants.currentUserId;
-      
-      // 1. Charger le nom d'utilisateur
       final name = await UserService().getUserName(userId);
-      
-      // 2. Récupérer et calculer les données des selles (Journal)
       final stools = await StoolService().getStools(userId);
       final now = DateTime.now();
       
@@ -86,7 +81,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       }
 
-      // Générer le mini-graphique des 7 derniers jours
       List<Map<String, dynamic>> tempLast7 = [];
       for (int i = 6; i >= 0; i--) {
         final dayIndex = now.subtract(Duration(days: i));
@@ -101,21 +95,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // --- LOGIQUE DE LA TENDANCE ---
       String trend = "stable";
-      
-      // On trie les selles de la plus récente à la plus ancienne pour analyser les 4 derniers jours
-      final sortedStools = List<Stool>.from(stools);
-      sortedStools.sort((a, b) => b.date!.compareTo(a.date!));
-
-      // 1. Vérification immédiate : Sang ou Urgence aujourd'hui ou récemment ?
       bool recentDanger = stools.any((s) {
         if (s.date == null) return false;
         final d = s.date!.toLocal();
-        // On regarde les 4 derniers jours
         return now.difference(d).inDays <= 4 && (s.blood || s.urgency);
       });
 
-      // 2. Vérification : 4 jours d'affilée avec un Bristol >= 4 ?
-      // On va grouper par jour unique pour voir la tendance des 4 derniers jours d'activité
       int consecutiveHighBristolDays = 0;
       DateTime checkDate = DateTime(now.year, now.month, now.day);
 
@@ -127,13 +112,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return d.year == dayToCheck.year && d.month == dayToCheck.month && d.day == dayToCheck.day;
         });
 
-        // Si l'utilisateur a enregistré des selles ce jour-là, on vérifie si TOUTES ou la MOYENNE est >= 4
         if (stoolsForDay.isNotEmpty) {
           bool hasHighBristol = stoolsForDay.any((s) => s.bristol >= 4);
           if (hasHighBristol) {
             consecutiveHighBristolDays++;
           } else {
-            break; // Cassé ! Pas consécutif
+            break; 
           }
         }
       }
@@ -142,29 +126,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         trend = "en crise";
       }
 
-      // 3. Récupérer et calculer les données des médicaments
       final meds = await MedicationService().getMeds(userId);
       int takenCount = 0;
       int totalCount = meds.length;
       String nextMed = "Traitement à jour";
 
       for (var m in meds) {
-        // 💾 FIX 1 : On force la valeur par défaut à 0 si takenToday ou totalToday sont nulls
         final taken = m.takenToday ?? 0;
         final total = m.totalToday ?? 0;
-        
         takenCount += taken;
         if (taken < total) {
           nextMed = "Prochain : ${m.name}";
         }
       }
 
-      // 4. Récupérer le prochain rendez-vous
       Appointment? upcomingAppt;
       try {
         final appointmentsMap = await AppointmentService().getAppointments(userId);
-        
-        // 💾 FIX 2 & 3 : On extrait tous les rendez-vous de la Map pour en faire une liste plate
         List<Appointment> allAppointments = [];
         appointmentsMap.forEach((key, list) {
           allAppointments.addAll(list);
@@ -173,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final futureAppts = allAppointments.where((a) => a.date.isAfter(now)).toList();
         if (futureAppts.isNotEmpty) {
           futureAppts.sort((a, b) => a.date.compareTo(b.date));
-          upcomingAppt = futureAppts.first; // Nom corrigé ici
+          upcomingAppt = futureAppts.first;
         }
       } catch (e) {
         print("⚠️ Pas de service de RDV ou erreur : $e");
@@ -204,6 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final t = context.t;
     final today = DateTime.now();
     final dateStr = DateFormat('EEEE d MMMM', 'fr_FR').format(today);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     if (_isLoading) {
       return Center(
@@ -216,7 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- HEADER AVEC MASCOTTE ET NOTIFS ---
+          // --- HEADER AVEC MASCOTTE ET INTEGRATION DU SWITCH ---
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 8, 22, 8),
             child: Row(
@@ -267,28 +246,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                // Cloche notifications
-                Stack(
-                  children: [
-                    Container(
-                      width: 42, height: 42,
-                      decoration: BoxDecoration(
-                        color: t.surface, shape: BoxShape.circle,
-                        border: Border.all(color: t.border),
-                      ),
-                      child: Icon(Icons.notifications_none_rounded, size: 20, color: t.text),
-                    ),
-                    Positioned(
-                      top: 8, right: 9,
-                      child: Container(
-                        width: 8, height: 8,
+                // 🌗 INTERRUPTEUR DE THÈME RIVERPOD
+                Consumer(
+                  builder: (context, ref, child) {
+                    return GestureDetector(
+                      onTap: () {
+                        ref.read(themeProvider.notifier).state = 
+                            isDarkMode ? ThemeMode.light : ThemeMode.dark;
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        width: 42, height: 42,
                         decoration: BoxDecoration(
-                          color: AppColors.selles, shape: BoxShape.circle,
-                          border: Border.all(color: t.surface, width: 1.5),
+                          color: t.surface, shape: BoxShape.circle,
+                          border: Border.all(color: t.border),
+                        ),
+                        child: Icon(
+                          isDarkMode ? Icons.wb_sunny_rounded : Icons.nightlight_round, 
+                          size: 20, 
+                          color: isDarkMode ? Colors.amber : t.text,
                         ),
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ],
             ),
@@ -364,10 +344,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: [
-                            const Icon(Icons.menu_book_rounded, size: 16, color: Colors.white70),
-                            const SizedBox(width: 8),
-                            const Text(
+                          children: const [
+                            Icon(Icons.menu_book_rounded, size: 16, color: Colors.white70),
+                            SizedBox(width: 8),
+                            Text(
                               'JOURNAL · AUJOURD\'HUI',
                               style: TextStyle(
                                 fontFamily: 'Quicksand', fontSize: 13,
@@ -414,7 +394,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ],
                     ),
                   ),
-                  // Sparkline Dynamique des 7 derniers jours
                   SizedBox(
                     width: 92, height: 60,
                     child: Row(
@@ -465,7 +444,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
             child: Row(
               children: [
-                // Bloc Poids (Statique pour le moment)
                 Expanded(
                   child: PoopyCard(
                     backgroundColor: AppColors.poids,
@@ -534,7 +512,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Bloc Médicaments Dynamique
                 Expanded(
                   child: PoopyCard(
                     backgroundColor: AppColors.meds,

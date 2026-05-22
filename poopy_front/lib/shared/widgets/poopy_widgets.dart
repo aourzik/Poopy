@@ -78,26 +78,26 @@ class _PoopyCardState extends State<PoopyCard>
                     ? null
                     : Border.all(color: t.border, width: 1)),
             boxShadow: widget.boxShadow ??
-                (isColored
-                    ? [
-                        BoxShadow(
-                          color: color.withOpacity(0.3),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
-                        ),
-                        BoxShadow(
-                          color: color.withOpacity(0.15),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 2,
-                          offset: const Offset(0, 1),
-                        ),
-                      ]),
+              (isColored
+                  ? [
+                      BoxShadow(
+                        color: color.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.3),
+                        blurRadius: 24,
+                        offset: const Offset(0, 8),
+                      ),
+                      BoxShadow(
+                        color: color.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.06 : 0.15),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]),
           ),
           child: widget.child,
         ),
@@ -182,7 +182,7 @@ class _PoopyButtonState extends State<PoopyButton>
                         : [t.pink, t.pinkDeep],
                   )
                 : null,
-            color: canPress ? null : AppColors.surfaceMuted,
+            color: canPress ? null : t.surfaceMuted, // ⚡️ CORRIGÉ DYNAMIQUE
             borderRadius: BorderRadius.circular(widget.height / 2),
             boxShadow: canPress
                 ? [
@@ -208,7 +208,7 @@ class _PoopyButtonState extends State<PoopyButton>
                   fontFamily: 'Quicksand',
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: canPress ? Colors.white : AppColors.textMuted,
+                  color: canPress ? Colors.white : t.textMuted, // ⚡️ CORRIGÉ DYNAMIQUE
                   letterSpacing: 0.2,
                 ),
               ),
@@ -350,14 +350,15 @@ class EyebrowLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.t;
     return Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'Quicksand',
         fontSize: 11.5,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.8,
-        color: AppColors.textDim,
+        color: t.textDim, // ⚡️ CORRIGÉ DYNAMIQUE
       ),
     );
   }
@@ -408,10 +409,10 @@ class _PoopyTextFieldState extends State<PoopyTextField> {
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(widget.label,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Quicksand', fontSize: 12,
               fontWeight: FontWeight.w700, letterSpacing: 0.4,
-              color: AppColors.textDim,
+              color: t.textDim, // ⚡️ CORRIGÉ DYNAMIQUE
             )),
         ),
         AnimatedContainer(
@@ -428,7 +429,7 @@ class _PoopyTextFieldState extends State<PoopyTextField> {
             children: [
               const SizedBox(width: 16),
               Icon(widget.icon, size: 18,
-                color: _focused ? t.pinkDeep : AppColors.textMuted),
+                color: _focused ? t.pinkDeep : t.textMuted), // ⚡️ CORRIGÉ DYNAMIQUE),
               const SizedBox(width: 10),
               Expanded(
                 child: Focus(

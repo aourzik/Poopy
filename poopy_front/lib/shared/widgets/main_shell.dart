@@ -21,38 +21,41 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
+    final t = context.t; // ⚡️ Tokens dynamiques branchés !
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: t.bg, // ⚡️ FOND CORRIGÉ : Dynamique !
       body: Stack(
         children: [
-          // Gradient background
+          // Gradient background dynamique (Utilise bgDark et bgDark2 si sombre)
           Positioned.fill(
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [AppColors.bgLight, AppColors.bgLight2],
+                  colors: [t.bg, t.bgGradientEnd], // ⚡️ DEGRADÉ CORRIGÉ !
                 ),
               ),
             ),
           ),
-          // 2. LA BULLE ROSE DU HAUT (Celle du Splash)
+          
+          // 2. LA BULLE ROSE DU HAUT (Ajustée pour ne pas flasher en sombre)
           Positioned(
             top: -80, left: -60, right: -60,
             child: Container(
               height: 320,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  colors: [AppColors.pink.withOpacity(0.2), Colors.transparent],
+                  colors: [t.pink.withOpacity(isDark ? 0.04 : 0.2), Colors.transparent],
                   radius: 0.65,
                 ),
               ),
             ),
           ),
 
-          // 3. LA BULLE VIOLETTE DU BAS (Celle du Splash)
+          // 3. LA BULLE VIOLETTE DU BAS
           Positioned(
             bottom: -60, right: -80,
             child: Container(
@@ -60,16 +63,19 @@ class MainShell extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [AppColors.poids.withOpacity(0.13), Colors.transparent],
+                  colors: [AppColors.poids.withOpacity(isDark ? 0.03 : 0.13), Colors.transparent],
                   radius: 0.7,
                 ),
               ),
             ),
           ),
+
           // Content
           SafeArea(
+            bottom: false, // Laisse les écrans couler proprement sous la barre du bas
             child: child,
           ),
+
           // Floating bottom nav
           Positioned(
             left: 12, right: 12, bottom: 18,
@@ -104,7 +110,7 @@ class _FloatingNavBar extends StatelessWidget {
         child: Container(
           height: 68,
           decoration: BoxDecoration(
-            color: t.navBg,
+            color: t.navBg, // ⚡️ Déjà dynamique !
             borderRadius: BorderRadius.circular(34),
             border: Border.all(color: t.border, width: 1),
             boxShadow: [
