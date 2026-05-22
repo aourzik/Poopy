@@ -26,7 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int? _selectedMood;
   bool _isLoading = true;
 
- int _todayStoolsCount = 0;
+  int _todayStoolsCount = 0;
   String _todayStoolsDetail = "Aucune trace aujourd'hui";
   List<Map<String, dynamic>> _dynamicLast7 = [];
 
@@ -36,6 +36,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Appointment? _nextAppointment;
   final List<String> _monthsList = ['JANV.', 'FÉVR.', 'MARS', 'AVR.', 'MAI', 'JUIN', 'JUIL.', 'AOÛT', 'SEPT.', 'OCT.', 'NOV.', 'DÉC.'];
+
+  String _healthTrend = "stable";
 
   static const _moods = [
     (emoji: '😣', label: 'Crise', value: 1),
@@ -97,6 +99,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
         tempLast7.add({'day': dayIndex.day, 'count': countForDay});
       }
 
+      // --- LOGIQUE DE LA TENDANCE ---
+      String trend = "stable";
+      
+      // On trie les selles de la plus récente à la plus ancienne pour analyser les 4 derniers jours
+      final sortedStools = List<Stool>.from(stools);
+      sortedStools.sort((a, b) => b.date!.compareTo(a.date!));
+
+      // 1. Vérification immédiate : Sang ou Urgence aujourd'hui ou récemment ?
+      bool recentDanger = stools.any((s) {
+        if (s.date == null) return false;
+        final d = s.date!.toLocal();
+        // On regarde les 4 derniers jours
+        return now.difference(d).inDays <= 4 && (s.blood || s.urgency);
+      });
+
+      // 2. Vérification : 4 jours d'affilée avec un Bristol >= 4 ?
+      // On va grouper par jour unique pour voir la tendance des 4 derniers jours d'activité
+      int consecutiveHighBristolDays = 0;
+      DateTime checkDate = DateTime(now.year, now.month, now.day);
+
+      for (int i = 0; i < 4; i++) {
+        final dayToCheck = checkDate.subtract(Duration(days: i));
+        final stoolsForDay = stools.where((s) {
+          if (s.date == null) return false;
+          final d = s.date!.toLocal();
+          return d.year == dayToCheck.year && d.month == dayToCheck.month && d.day == dayToCheck.day;
+        });
+
+        // Si l'utilisateur a enregistré des selles ce jour-là, on vérifie si TOUTES ou la MOYENNE est >= 4
+        if (stoolsForDay.isNotEmpty) {
+          bool hasHighBristol = stoolsForDay.any((s) => s.bristol >= 4);
+          if (hasHighBristol) {
+            consecutiveHighBristolDays++;
+          } else {
+            break; // Cassé ! Pas consécutif
+          }
+        }
+      }
+
+      if (recentDanger || consecutiveHighBristolDays >= 4) {
+        trend = "en crise";
+      }
+
       // 3. Récupérer et calculer les données des médicaments
       final meds = await MedicationService().getMeds(userId);
       int takenCount = 0;
@@ -145,6 +190,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _nextMedText = nextMed;
           _nextAppointment = upcomingAppt;
           _isLoading = false;
+          _healthTrend = trend;
         });
       }
     } catch (e) {
@@ -562,7 +608,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
 
-          // --- BANDEAU TENDANCE ---
+          // --- BANDEAU TENDANCE INTELLIGENT ---
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 0, 22, 14),
             child: PoopyCard(
@@ -572,10 +618,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Container(
                     width: 38, height: 38,
                     decoration: BoxDecoration(
-                      color: AppColors.pink.withOpacity(0.2),
+                      color: (_healthTrend == "en crise" ? AppColors.selles : AppColors.pink).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.auto_awesome_rounded, size: 20, color: AppColors.pinkDeep),
+                    child: Icon(
+                      _healthTrend == "en crise" ? Icons.warning_amber_rounded : Icons.auto_awesome_rounded, 
+                      size: 20, 
+                      color: _healthTrend == "en crise" ? AppColors.selles : AppColors.pinkDeep
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -583,14 +633,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Tendance stable depuis 4 jours',
+                          'Tendance $_healthTrend',
                           style: TextStyle(
                             fontFamily: 'Quicksand', fontSize: 13,
                             fontWeight: FontWeight.w700, color: context.t.text,
                           ),
                         ),
                         Text(
-                          'Bonne réponse au traitement actuel.',
+                          _healthTrend == "en crise" 
+                              ? 'Alerte : restes vigilant(e) et adaptes ton alimentation.'
+                              : 'Bonne réponse au traitement actuel.',
                           style: TextStyle(
                             fontFamily: 'Quicksand', fontSize: 11.5,
                             fontWeight: FontWeight.w500, color: context.t.textDim,
