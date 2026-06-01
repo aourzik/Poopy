@@ -1,0 +1,17 @@
+services:
+
+  # ── Backend connecté à Neon ───────────────────────────────────────────────
+  back:
+    build:
+      context:    ./poopy-back
+      dockerfile: Dockerfile
+    container_name: poopy_back
+    restart: unless-stopped
+    env_file:
+      - ./poopy-back/.env        # DATABASE_URL Neon + PORT
+    environment:
+      PORT: 3000
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./poopy-back/src:/app/src:ro   # Hot-reload en dev

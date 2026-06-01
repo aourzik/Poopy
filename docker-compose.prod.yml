@@ -1,0 +1,18 @@
+services:
+
+  # ── Backend connecté à Neon (production) ─────────────────────────────────
+  back:
+    build:
+      context:    ./poopy-back
+      dockerfile: Dockerfile
+    container_name: poopy_back_prod
+    restart: always
+    env_file:
+      - ./poopy-back/.env        # DATABASE_URL + PORT
+    ports:
+      - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus:   "0.5"

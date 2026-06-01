@@ -49,13 +49,24 @@ class _JournalScreenState extends State<JournalScreen> {
 
       for (var s in stools) {
         if (s.date != null) {
-          // .toLocal() est crucial ici pour gérer le décalage Neon/Téléphone
           final localDate = s.date!.toLocal();
-          final dayKey =
-              DateTime(localDate.year, localDate.month, localDate.day);
+          final dayKey = DateTime(localDate.year, localDate.month, localDate.day);
 
-          loadedEntries[dayKey] = s;
-          print("📍 Point ajouté pour : $dayKey"); // Log de vérification
+          if (loadedEntries.containsKey(dayKey)) {
+            final existing = loadedEntries[dayKey]!;
+            // Fusion : cumul des count, OR pour sang/urgence, bristol du plus récent
+            loadedEntries[dayKey] = Stool(
+              id: existing.id,
+              userId: existing.userId,
+              bristol: s.bristol,
+              count: existing.count + s.count,
+              blood: existing.blood || s.blood,
+              urgency: existing.urgency || s.urgency,
+              date: existing.date,
+            );
+          } else {
+            loadedEntries[dayKey] = s;
+          }
         }
       }
 
@@ -107,7 +118,7 @@ class _JournalScreenState extends State<JournalScreen> {
         // Un jour est "actif" s'il y a une entrée
         activeDaysCount++;
 
-        totalEpisodes += 1;
+        totalEpisodes += stool.count;
 
         if (stool.blood) daysWithBlood++;
         if (stool.urgency) daysWithUrgency++;

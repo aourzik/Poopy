@@ -21,22 +21,70 @@ const app = new Elysia()
   // ---------------------------------------------------------
   // 👤 GROUPE : UTILISATEURS
   // ---------------------------------------------------------
-  .group("/user", (group) => 
+  .group("/user", (group) =>
     group
-      .post("/", async ({ body }) => {
-        let user = await prisma.user.findUnique({ where: { email: body.email } });
-        if (!user) {
-          user = await prisma.user.create({ data: { email: body.email, name: body.name } });
+      .post("/", async ({ body, set }) => {
+        try {
+          const existing = await prisma.user.findUnique({ where: { email: body.email } });
+          if (existing) {
+            set.status = 409;
+            return { error: "Un compte existe déjà avec cet email." };
+          }
+          const user = await prisma.user.create({
+            data: { email: body.email, name: body.name, diagnosis: body.diagnosis ?? null }
+          });
+          return user;
+        } catch (error) {
+          console.error("❌ Erreur Create User:", error);
+          set.status = 500;
+          return { error: "Erreur lors de la création du compte" };
+        }
+      }, {
+        body: t.Object({
+          email: t.String({ format: 'email' }),
+          name: t.String(),
+          diagnosis: t.Optional(t.String()),
+        })
+      })
+
+      .get("/login", async ({ query, set }) => {
+        const { email, name } = query;
+        if (!email) { set.status = 400; return { error: "Email requis" }; }
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) { set.status = 404; return { error: "Aucun compte trouvé avec cet email." }; }
+        if (name && user.name.toLowerCase() !== name.toLowerCase()) {
+          set.status = 401;
+          return { error: "Nom d'utilisateur incorrect." };
         }
         return user;
-      }, {
-        body: t.Object({ email: t.String({ format: 'email' }), name: t.String() })
       })
-      .get("/all-test", async () => await prisma.user.findMany())
+
       .get("/:id", async ({ params }) => {
-        return await prisma.user.findUnique({
-          where: { id: params.id }
-        });
+        return await prisma.user.findUnique({ where: { id: params.id } });
+      })
+
+      .patch("/:id", async ({ params, body, set }) => {
+        try {
+          const updated = await prisma.user.update({
+            where: { id: params.id },
+            data: {
+              ...(body.name !== undefined && { name: body.name }),
+              ...(body.diagnosis !== undefined && { diagnosis: body.diagnosis }),
+              ...(body.avatarUrl !== undefined && { avatarUrl: body.avatarUrl }),
+            },
+          });
+          return updated;
+        } catch (error) {
+          console.error("❌ Erreur Update User:", error);
+          set.status = 500;
+          return { error: "Impossible de mettre à jour l'utilisateur" };
+        }
+      }, {
+        body: t.Object({
+          name: t.Optional(t.String()),
+          diagnosis: t.Optional(t.String()),
+          avatarUrl: t.Optional(t.String()),
+        })
       })
   )
 
@@ -45,40 +93,21 @@ const app = new Elysia()
   // ---------------------------------------------------------
   .group("/stool", (group) =>
     group
-      // 💩 ROUTE : Enregistrer (Créer) ou Modifier
       .post("/", async ({ body, set }) => {
         try {
           const { id, userId, bristol, count, blood, urgency, date } = body;
-
-          // Détection de l'ID pour mise à jour ou création
           const isUpdate = id && id !== "" && id !== "null" && id !== "undefined";
 
           if (isUpdate) {
-            console.log(`📝 Modification de la selle : ${id}`);
             return await prisma.stool.update({
-              where: { id: id },
-              data: {
-                bristol,
-                count,
-                blood,
-                urgency,
-                date: date ? new Date(date) : undefined,
-              },
+              where: { id },
+              data: { bristol, count, blood, urgency, date: date ? new Date(date) : undefined },
             });
-          } 
+          }
 
-          console.log(`🆕 Création d'une nouvelle selle pour l'user : ${userId}`);
           return await prisma.stool.create({
-            data: {
-              userId,
-              bristol,
-              count,
-              blood,
-              urgency,
-              date: date ? new Date(date) : new Date(),
-            },
+            data: { userId, bristol, count, blood, urgency, date: date ? new Date(date) : new Date() },
           });
-
         } catch (error) {
           console.error("❌ Erreur Prisma Stool:", error);
           set.status = 500;
@@ -96,7 +125,6 @@ const app = new Elysia()
         })
       })
 
-      // 🔥 ROUTE : Récupérer les selles d'un utilisateur
       .get("/user/:userId", async ({ params, set }) => {
         try {
           return await prisma.stool.findMany({
@@ -116,7 +144,6 @@ const app = new Elysia()
   // ---------------------------------------------------------
   .group("/medication", (group) =>
     group
-      // 📝 Créer un nouveau médicament
       .post("/", async ({ body, set }) => {
         try {
           return await prisma.medication.create({
@@ -147,31 +174,25 @@ const app = new Elysia()
         })
       })
 
-      // 📈 Récupérer les médocs avec logs du jour
       .get("/user/:userId", async ({ params, set }) => {
         try {
-          const meds = await prisma.medication.findMany({
+          return await prisma.medication.findMany({
             where: { userId: params.userId },
             include: {
               logs: {
-                where: {
-                  takenAt: { gte: new Date(new Date().setHours(0,0,0,0)) }
-                }
+                where: { takenAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } }
               }
             }
           });
-          return meds;
         } catch (e) {
-          console.error("❌ Erreur GET:", e);
-          set.status = 500; 
+          console.error("❌ Erreur GET medications:", e);
+          set.status = 500;
           return [];
         }
       })
 
-      // ✅ Action : Marquer comme pris
       .post("/log", async ({ body, set }) => {
         try {
-          console.log("📝 Log pour medicationId:", body.medicationId);
           return await prisma.medicationLog.create({
             data: { medicationId: body.medicationId }
           });
@@ -184,18 +205,14 @@ const app = new Elysia()
         body: t.Object({ medicationId: t.String() })
       })
 
-      // 🗑️ Action : Supprimer
       .delete("/:id", async ({ params, set }) => {
         try {
-          const { id } = params;
-          console.log("🗑️ Tentative de suppression du médoc:", id);
-          
           return await prisma.$transaction([
-            prisma.medicationLog.deleteMany({ where: { medicationId: id } }),
-            prisma.medication.delete({ where: { id: id } })
+            prisma.medicationLog.deleteMany({ where: { medicationId: params.id } }),
+            prisma.medication.delete({ where: { id: params.id } })
           ]);
         } catch (error) {
-          console.error("❌ Erreur Suppression:", error);
+          console.error("❌ Erreur Suppression medication:", error);
           set.status = 500;
           return { error: "Erreur" };
         }
@@ -209,24 +226,21 @@ const app = new Elysia()
     group
       .post("/", async ({ body, set }) => {
         try {
-          console.log("📥 Données reçues :", body);
-          
           const newAppt = await prisma.appointment.create({
             data: {
-              date: new Date(body.date), 
+              date: new Date(body.date),
               doctor: body.doctor,
               location: body.location,
               type: body.type,
-              notes: body.notes ?? null, 
+              notes: body.notes ?? null,
               preparation: body.preparation ?? null,
               userId: body.userId,
             },
           });
-          
           set.status = 201;
           return newAppt;
         } catch (error) {
-          console.error("❌ Erreur Prisma détaillée :", error);
+          console.error("❌ Erreur Create Appointment:", error);
           set.status = 500;
           return { error: "Erreur serveur" };
         }
@@ -247,13 +261,10 @@ const app = new Elysia()
           where: { userId: params.userId },
           orderBy: { date: 'asc' }
         });
-
         const now = new Date();
         return {
           upcoming: all.filter(a => new Date(a.date) >= now),
-          past: all.filter(a => new Date(a.date) < now)
-                   .reverse() 
-                   .slice(0, 3) 
+          past: all.filter(a => new Date(a.date) < now).reverse().slice(0, 3)
         };
       })
   )
@@ -263,10 +274,8 @@ const app = new Elysia()
   // ---------------------------------------------------------
   .group("/weight", (group) =>
     group
-      // 📝 Enregistrer une nouvelle pesée
       .post("/", async ({ body, set }) => {
         try {
-          console.log(`🆕 Enregistrement d'un nouveau poids pour : ${body.userId}`);
           return await prisma.weight.create({
             data: {
               userId: body.userId,
@@ -287,7 +296,6 @@ const app = new Elysia()
         })
       })
 
-      // 📊 Récupérer tout l'historique de poids d'un utilisateur
       .get("/user/:userId", async ({ params, set }) => {
         try {
           return await prisma.weight.findMany({
@@ -307,41 +315,47 @@ const app = new Elysia()
   // ---------------------------------------------------------
   .group("/lab", (group) =>
     group
-      // 📝 Enregistrer une analyse
       .post("/", async ({ body, set }) => {
         try {
           return await prisma.medicalLab.create({
             data: {
               userId: body.userId,
+              type: body.type,
               crp: body.crp ?? null,
               calprotectin: body.calprotectin ?? null,
-              type: body.type, // <-- Ajoute bien ce champ
+              b12: body.b12 ?? null,
+              b9: body.b9 ?? null,
+              ferritin: body.ferritin ?? null,
+              iron: body.iron ?? null,
               notes: body.notes ?? null,
               date: body.date ? new Date(body.date) : new Date(),
             }
           });
         } catch (error) {
-          console.error("❌ Erreur:", error);
+          console.error("❌ Erreur Create Lab:", error);
           set.status = 500;
           return { error: "Erreur lors de l'enregistrement" };
         }
       }, {
         body: t.Object({
           userId: t.String(),
+          type: t.String(),
           crp: t.Optional(t.Number()),
           calprotectin: t.Optional(t.Number()),
-          type: t.String(), 
+          b12: t.Optional(t.Number()),
+          b9: t.Optional(t.Number()),
+          ferritin: t.Optional(t.Number()),
+          iron: t.Optional(t.Number()),
           notes: t.Optional(t.String()),
           date: t.Optional(t.String())
         })
       })
 
-      // 📊 Récupérer toutes les analyses d'un utilisateur
       .get("/user/:userId", async ({ params, set }) => {
         try {
           return await prisma.medicalLab.findMany({
             where: { userId: params.userId },
-            orderBy: { date: 'desc' } // De la plus récente à la plus ancienne
+            orderBy: { date: 'desc' }
           });
         } catch (error) {
           console.error("❌ Erreur Fetch Labs:", error);

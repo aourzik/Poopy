@@ -10,11 +10,12 @@ generator client {
 model User {
   id           String        @id @default(uuid())
   email        String        @unique
-  name         String        // Pseudo de l'utilisateur
+  name         String
+  diagnosis    String?       // RCH, Crohn, MICI indéterminée...
+  avatarUrl    String?       // Base64 de la photo de profil
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-  
-  // Relations : un utilisateur possède toutes ces données
+
   stools       Stool[]
   medications  Medication[]
   appointments Appointment[]
@@ -26,11 +27,11 @@ model User {
 model Stool {
   id        String   @id @default(uuid())
   date      DateTime @default(now())
-  count     Int      @default(1)     // Le nombre (stepper)
-  bristol   Int                      // Échelle de Bristol (1 à 7)
-  blood     Boolean  @default(false) // Présence de sang (Toggle)
-  urgency   Boolean  @default(false) // Urgence / Faux besoins (Toggle)
-  
+  count     Int      @default(1)
+  bristol   Int
+  blood     Boolean  @default(false)
+  urgency   Boolean  @default(false)
+
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -40,23 +41,21 @@ model Stool {
 // 💊 2. SUIVI DES MÉDICAMENTS / TRAITEMENTS
 model Medication {
   id           String   @id @default(uuid())
-  name         String   // Pentasa
-  dose         String   // 500 mg
-  frequency    String   // 2 comprimés · 3×/jour
-  totalToday   Int?     // 3 (le chiffre total prévu)
+  name         String
+  dose         String
+  frequency    String
+  totalToday   Int?
   isInjection  Boolean  @default(false)
-  color        String   @default("amber") // coral, amber, green, etc.
-  
+  color        String   @default("amber")
+
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Relation vers les prises réelles du jour
   logs         MedicationLog[]
 
   @@index([userId])
 }
 
-// Nouvelle table pour enregistrer chaque clic sur "Marquer pris"
 model MedicationLog {
   id           String     @id @default(uuid())
   takenAt      DateTime   @default(now())
@@ -67,27 +66,32 @@ model MedicationLog {
 // 🏥 3. RENDEZ-VOUS MÉDICAUX
 model Appointment {
   id          String   @id @default(uuid())
-  date        DateTime // Contient date + heure
-  doctor      String   // Nom du Dr ou Lab
-  location    String   // Lieu
-  type        String   // Motif du rdv
-  notes       String?  // Section "Voir les détails"
-  preparation String?  // Section "Préparer la visite"
-  
+  date        DateTime
+  doctor      String
+  location    String
+  type        String
+  notes       String?
+  preparation String?
+
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// 🧪 4. ANALYSES CLINIQUES & BIOLOGIQUES (Le suivi des crises)
+// 🧪 4. ANALYSES CLINIQUES & BIOLOGIQUES
 model MedicalLab {
   id             String   @id @default(uuid())
-  date           DateTime @default(now()) // Date de l'analyse ou du prélèvement
-  calprotectin   Float?                   // Calprotectine fécale (mg/kg) -> Optionnel si juste prise de sang
-  crp            Float?                   // Protéine C-Réactive (mg/L) -> Optionnel si juste selles
-  notes          String?                  // Remarques additionnelles
-  
+  date           DateTime @default(now())
+  type           String   @default("blood")  // "blood" ou "calprotectin"
+  calprotectin   Float?
+  crp            Float?
+  b12            Float?   // Vitamine B12 (pg/mL)
+  b9             Float?   // Vitamine B9 / Folate (µg/L)
+  ferritin       Float?   // Ferritine (ng/mL)
+  iron           Float?   // Fer sérique (µmol/L)
+  notes          String?
+
   userId         String
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -97,7 +101,7 @@ model MedicalLab {
 // 📈 5. SUIVI DU POIDS
 model Weight {
   id        String   @id @default(uuid())
-  value     Float    // Le poids de l'utilisateur (ex: 62.4)
+  value     Float
   date      DateTime @default(now())
 
   userId    String

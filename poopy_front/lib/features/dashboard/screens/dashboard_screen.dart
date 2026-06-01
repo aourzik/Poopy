@@ -64,11 +64,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _healthTrend = "stable";
 
   static const _moods = [
-    (emoji: '😣', label: 'Crise', value: 1),
-    (emoji: '😕', label: 'Difficile', value: 2),
-    (emoji: '😐', label: 'Moyen', value: 3),
-    (emoji: '🙂', label: 'Bien', value: 4),
-    (emoji: '😄', label: 'Top', value: 5),
+    (emoji: 'assets/emojis/crise.png', label: 'Crise', value: 1),
+    (emoji: 'assets/emojis/difficile.png', label: 'Difficile', value: 2),
+    (emoji: 'assets/emojis/moyen.png', label: 'Moyen', value: 3),
+    (emoji: 'assets/emojis/bien.png', label: 'Bien', value: 4),
+    (emoji: 'assets/emojis/top.png', label: 'Top', value: 5),
   ];
 
   @override
@@ -80,9 +80,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadAllDashboardData() async {
     try {
       final userId = AppConstants.currentUserId;
-      final name = await UserService().getUserName(userId);
-      final stools = await StoolService().getStools(userId);
-      final weights = await _weightService.getWeights(userId);
+
+      final nameFuture = UserService().getUserName(userId);
+      final stoolsFuture = StoolService().getStools(userId);
+      final weightsFuture = _weightService.getWeights(userId);
+      final medsFuture = MedicationService().getMeds(userId);
+      final apptsFuture = AppointmentService().getAppointments(userId);
+
+      await Future.wait([nameFuture, stoolsFuture, weightsFuture, medsFuture, apptsFuture]);
+
+      final name = await nameFuture;
+      final stools = await stoolsFuture;
+      final weights = await weightsFuture;
       final now = DateTime.now();
 
       int todayCount = 0;
@@ -94,9 +103,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (localDate.year == now.year &&
               localDate.month == now.month &&
               localDate.day == now.day) {
-            todayCount++;
+            todayCount += s.count;
             todayDetail =
-                "Bristol ${s.bristol}${s.urgency ? ' · urgence' : ''}";
+                "Bristol ${s.bristol}${s.urgency ? ' · urgence' : ''}${s.blood ? ' · sang' : ''}";
           }
         }
       }
@@ -156,7 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         trend = "en crise";
       }
 
-      final meds = await MedicationService().getMeds(userId);
+      final meds = await medsFuture;
       int takenCount = 0;
       int totalCount = meds.length;
       String nextMed = "Traitement à jour";
@@ -172,8 +181,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       Appointment? upcomingAppt;
       try {
-        final appointmentsMap =
-            await AppointmentService().getAppointments(userId);
+        final appointmentsMap = await apptsFuture;
         List<Appointment> allAppointments = [];
         appointmentsMap.forEach((key, list) {
           allAppointments.addAll(list);
@@ -358,8 +366,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                           child: Column(
                             children: [
-                              Text(m.emoji,
-                                  style: const TextStyle(fontSize: 22)),
+                              Image.asset(m.emoji, width: 28, height: 28),
                               const SizedBox(height: 4),
                               Text(
                                 m.label,
@@ -578,16 +585,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                 ],
                               ),
-                              Text(
-                                _currentWeight == 'N/C'
-                                    ? 'Aucune pesée'
-                                    : 'Suivi actif ↗',
-                                style: TextStyle(
-                                  fontFamily: 'Quicksand',
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withOpacity(0.85),
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    _currentWeight == 'N/C' ? 'Aucune pesée' : 'Suivi actif',
+                                    style: TextStyle(
+                                      fontFamily: 'Quicksand',
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withOpacity(0.85),
+                                    ),
+                                  ),
+                                  if (_currentWeight != 'N/C') ...[
+                                    const SizedBox(width: 4),
+                                    Icon(Icons.trending_up_rounded,
+                                        size: 14,
+                                        color: Colors.white.withOpacity(0.85)),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
@@ -685,6 +700,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: PoopyCard(
               borderRadius: 20,
               padding: const EdgeInsets.all(16),
+              onTap: () => context.go(AppRoutes.profile),
               child: Row(
                 children: [
                   Container(

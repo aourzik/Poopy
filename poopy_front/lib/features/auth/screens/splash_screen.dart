@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_router.dart';
+import '../../../core/services/user_session.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -41,8 +42,13 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    Future.delayed(const Duration(milliseconds: 80), () {
+    Future.delayed(const Duration(milliseconds: 80), () async {
       if (mounted) _controller.forward();
+      await UserSession.init();
+      if (mounted && UserSession.isLoggedIn) {
+        await Future.delayed(const Duration(milliseconds: 900));
+        if (mounted) context.go(AppRoutes.dashboard);
+      }
     });
   }
 
@@ -251,24 +257,27 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           const SizedBox(height: 16),
                           // Login link
-                          RichText(
-                            text: TextSpan(
-                              style: TextStyle(
-                                fontFamily: 'Quicksand',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: t.textMuted,
-                              ),
-                              children: [
-                                const TextSpan(text: "J'ai déjà un compte · "),
-                                TextSpan(
-                                  text: 'Se connecter',
-                                  style: TextStyle(
-                                    color: t.pinkDeep,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                          GestureDetector(
+                            onTap: () => context.push(AppRoutes.login),
+                            child: RichText(
+                              text: TextSpan(
+                                style: TextStyle(
+                                  fontFamily: 'Quicksand',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: t.textMuted,
                                 ),
-                              ],
+                                children: [
+                                  const TextSpan(text: "J'ai déjà un compte · "),
+                                  TextSpan(
+                                    text: 'Se connecter',
+                                    style: TextStyle(
+                                      color: t.pinkDeep,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

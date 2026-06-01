@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum MedColor { coral, amber, green, blue, purple }
 
 // ─── User ─────────────────────────────────────────────────────────────────────
@@ -7,7 +9,7 @@ class UserModel {
   final String name;
   final String email;
   final String? diagnosis;
-  final DateTime? diagnosisDate;
+  final String? avatarUrl;
   final DateTime createdAt;
 
   const UserModel({
@@ -15,7 +17,7 @@ class UserModel {
     required this.name,
     required this.email,
     this.diagnosis,
-    this.diagnosisDate,
+    this.avatarUrl,
     required this.createdAt,
   });
 
@@ -24,14 +26,11 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id']?.toString() ?? '', // Sécurité si l'ID est manquant
+      id: json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Utilisateur Anonyme',
       email: json['email']?.toString() ?? '',
       diagnosis: json['diagnosis'] as String?,
-      diagnosisDate: json['diagnosisDate'] != null
-          ? DateTime.parse(json['diagnosisDate'] as String)
-          : null,
-      // Pour createdAt, Prisma renvoie souvent une String ISO8601, le parse est bon
+      avatarUrl: json['avatarUrl'] as String?,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
@@ -43,7 +42,7 @@ class UserModel {
         'name': name,
         'email': email,
         'diagnosis': diagnosis,
-        'diagnosisDate': diagnosisDate?.toIso8601String(),
+        'avatarUrl': avatarUrl,
         'createdAt': createdAt.toIso8601String(),
       };
 }
@@ -53,7 +52,7 @@ class UserModel {
 class StoolEntry {
   final String id;
   final DateTime date;
-  final int bristol; // 1-5
+  final int bristol;
   final bool blood;
   final bool urgency;
   final int count;
@@ -142,9 +141,7 @@ class Medication {
   });
 
   factory Medication.fromJson(Map<String, dynamic> json) {
-    // CORRECTION ICI : On utilise 'logs' avec un S
     final List logs = json['logs'] ?? [];
-
     return Medication(
       id: json['id'],
       name: json['name'] ?? '',
@@ -196,7 +193,6 @@ class Appointment {
     this.preparation,
   });
 
-  // Calcul dynamique pour l'affichage
   int get daysFromNow => date.difference(DateTime.now()).inDays;
   bool get isUpcoming => date.isAfter(DateTime.now());
 
@@ -223,58 +219,75 @@ class Appointment {
       };
 }
 
-// ─── Medical Lab Types ────────────────────────────────────────────────────────
+// ─── Medical Lab ──────────────────────────────────────────────────────────────
 
 enum LabType { blood, calprotectin }
-
-// ─── Medical Lab Model ────────────────────────────────────────────────────────
 
 class MedicalLab {
   final String id;
   final DateTime date;
+  final LabType type;
   final double? calprotectin;
   final double? crp;
+  final double? b12;
+  final double? b9;
+  final double? ferritin;
+  final double? iron;
   final String? notes;
   final String userId;
-  final LabType type; // Ajout du type pour faciliter le filtrage
 
   const MedicalLab({
     required this.id,
     required this.date,
+    required this.type,
     this.calprotectin,
     this.crp,
+    this.b12,
+    this.b9,
+    this.ferritin,
+    this.iron,
     this.notes,
     required this.userId,
-    required this.type,
   });
 
   factory MedicalLab.fromJson(Map<String, dynamic> json) {
     return MedicalLab(
       id: json['id'] as String,
       date: DateTime.parse(json['date'] as String),
-      calprotectin: json['calprotectin'] != null ? (json['calprotectin'] as num).toDouble() : null,
-      crp: json['crp'] != null ? (json['crp'] as num).toDouble() : null,
-      notes: json['notes'] as String?,
-      userId: json['userId'] as String,
-      // Conversion automatique du type via le nom
       type: LabType.values.firstWhere(
-        (e) => e.name == json['type'],
+        (e) => e.name == (json['type'] ?? 'blood'),
         orElse: () => LabType.blood,
       ),
+      calprotectin: json['calprotectin'] != null
+          ? (json['calprotectin'] as num).toDouble()
+          : null,
+      crp: json['crp'] != null ? (json['crp'] as num).toDouble() : null,
+      b12: json['b12'] != null ? (json['b12'] as num).toDouble() : null,
+      b9: json['b9'] != null ? (json['b9'] as num).toDouble() : null,
+      ferritin: json['ferritin'] != null
+          ? (json['ferritin'] as num).toDouble()
+          : null,
+      iron: json['iron'] != null ? (json['iron'] as num).toDouble() : null,
+      notes: json['notes'] as String?,
+      userId: json['userId'] as String,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'userId': userId,
-    'calprotectin': calprotectin,
-    'crp': crp,
-    'notes': notes,
-    'date': date.toIso8601String(),
-    'type': type.name,
-  };
+        'userId': userId,
+        'type': type.name,
+        'calprotectin': calprotectin,
+        'crp': crp,
+        'b12': b12,
+        'b9': b9,
+        'ferritin': ferritin,
+        'iron': iron,
+        'notes': notes,
+        'date': date.toIso8601String(),
+      };
 }
 
-// ─── Weight Model ────────────────────────────────────────────────────
+// ─── Weight Model ─────────────────────────────────────────────────────────────
 
 class Weight {
   final String? id;
@@ -289,16 +302,14 @@ class Weight {
     required this.date,
   });
 
-  // Pour convertir les données de ta base Neon (JSON) en objet Flutter
   factory Weight.fromJson(Map<String, dynamic> json) {
     return Weight(
       id: json['id']?.toString(),
-      userId: json['user_id'] ?? '',
+      userId: json['userId'] ?? json['user_id'] ?? '',
       value: (json['value'] is int)
           ? (json['value'] as int).toDouble()
           : (json['value'] as double? ?? 0.0),
-      date:
-          json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
     );
   }
 
@@ -309,5 +320,27 @@ class Weight {
       'value': value,
       'date': date.toIso8601String(),
     };
+  }
+}
+
+// ─── Friend Request ───────────────────────────────────────────────────────────
+
+class FriendRequest {
+  final String id;
+  final String senderId;
+  final String senderName;
+
+  const FriendRequest({
+    required this.id,
+    required this.senderId,
+    required this.senderName,
+  });
+
+  factory FriendRequest.fromJson(Map<String, dynamic> json) {
+    return FriendRequest(
+      id: json['id'] as String,
+      senderId: json['senderId'] as String,
+      senderName: json['senderName'] as String? ?? '',
+    );
   }
 }
