@@ -3,7 +3,7 @@ import '../services/user_session.dart';
 class AppConstants {
   AppConstants._();
 
-  static const String baseUrl = 'http://10.0.2.2:3001';
+  static const String baseUrl = 'https://poopy-back.onrender.com';
   static const String apiBaseUrl = baseUrl;
 
   static String get currentUserId => UserSession.userId ?? '';

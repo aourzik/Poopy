@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: poopy-back
+    runtime: node
+    rootDir: poopy-back
+    buildCommand: npm install -g bun@latest || curl -fsSL https://bun.sh/install | bash && export PATH="$HOME/.bun/bin:$PATH" && bun install && bunx prisma generate
+    startCommand: bun run src/index.ts
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PORT
+        value: 3000
