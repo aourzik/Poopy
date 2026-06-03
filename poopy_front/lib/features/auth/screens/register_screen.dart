@@ -16,14 +16,18 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with SingleTickerProviderStateMixin {
-  final _nameCtrl = TextEditingController();
+  final _nameCtrl  = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _pwCtrl    = TextEditingController();
+  final _pw2Ctrl   = TextEditingController();
   late AnimationController _animCtrl;
   late Animation<double> _fadeIn;
   late Animation<Offset> _slideUp;
 
   String? _selectedDiagnosis;
   bool _isLoading = false;
+  bool _obscure1  = true;
+  bool _obscure2  = true;
   String? _error;
 
   static const _diagnoses = [
@@ -39,6 +43,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.initState();
     _nameCtrl.addListener(() => setState(() {}));
     _emailCtrl.addListener(() => setState(() {}));
+    _pwCtrl.addListener(() => setState(() {}));
+    _pw2Ctrl.addListener(() => setState(() {}));
 
     _animCtrl = AnimationController(
         duration: const Duration(milliseconds: 600), vsync: this);
@@ -56,6 +62,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
+    _pwCtrl.dispose();
+    _pw2Ctrl.dispose();
     _animCtrl.dispose();
     super.dispose();
   }
@@ -66,6 +74,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool get _canSubmit =>
       _nameCtrl.text.trim().length >= 2 &&
       _isValidEmail &&
+      _pwCtrl.text.length >= 8 &&
+      _pwCtrl.text == _pw2Ctrl.text &&
       _selectedDiagnosis != null &&
       !_isLoading;
 
@@ -76,6 +86,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     final result = await UserService().register(
       name: _nameCtrl.text,
       email: _emailCtrl.text,
+      password: _pwCtrl.text,
       diagnosis: _selectedDiagnosis,
     );
 
@@ -223,6 +234,37 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 icon: Icons.mail_outline_rounded,
                                 keyboardType: TextInputType.emailAddress,
                                 isValid: _emailCtrl.text.isEmpty ? null : _isValidEmail,
+                              ),
+                              const SizedBox(height: 14),
+                              PoopyTextField(
+                                label: 'Mot de passe',
+                                placeholder: '8 caractères minimum',
+                                controller: _pwCtrl,
+                                icon: Icons.lock_outline_rounded,
+                                obscureText: _obscure1,
+                                suffixIcon: GestureDetector(
+                                  onTap: () => setState(() => _obscure1 = !_obscure1),
+                                  child: Icon(
+                                    _obscure1 ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    size: 18, color: context.t.textDim,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              PoopyTextField(
+                                label: 'Confirme le mot de passe',
+                                placeholder: 'Répète ton mot de passe',
+                                controller: _pw2Ctrl,
+                                icon: Icons.lock_outline_rounded,
+                                obscureText: _obscure2,
+                                isValid: _pw2Ctrl.text.isEmpty ? null : _pwCtrl.text == _pw2Ctrl.text,
+                                suffixIcon: GestureDetector(
+                                  onTap: () => setState(() => _obscure2 = !_obscure2),
+                                  child: Icon(
+                                    _obscure2 ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    size: 18, color: context.t.textDim,
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: 14),
 

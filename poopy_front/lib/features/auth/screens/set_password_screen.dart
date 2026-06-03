@@ -5,38 +5,45 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/app_router.dart';
 import '../../../shared/widgets/poopy_widgets.dart';
 import '../services/user_service.dart';
-import 'set_password_screen.dart';
+import '../../../core/services/user_session.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class SetPasswordScreen extends StatefulWidget {
+  final String userId;
+  final String userName;
+
+  const SetPasswordScreen({
+    super.key,
+    required this.userId,
+    required this.userName,
+  });
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<SetPasswordScreen> createState() => _SetPasswordScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
+class _SetPasswordScreenState extends State<SetPasswordScreen>
     with SingleTickerProviderStateMixin {
-  final _emailCtrl = TextEditingController();
-  final _pwCtrl    = TextEditingController();
+  final _pwCtrl  = TextEditingController();
+  final _pw2Ctrl = TextEditingController();
   late AnimationController _animCtrl;
   late Animation<double> _fadeIn;
   late Animation<Offset> _slideUp;
 
   bool _isLoading = false;
-  bool _obscure   = true;
+  bool _obscure1  = true;
+  bool _obscure2  = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _emailCtrl.addListener(() => setState(() {}));
     _pwCtrl.addListener(() => setState(() {}));
+    _pw2Ctrl.addListener(() => setState(() {}));
 
     _animCtrl = AnimationController(
         duration: const Duration(milliseconds: 600), vsync: this);
     _fadeIn = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
-    _slideUp = Tween<Offset>(
-            begin: const Offset(0, 0.06), end: Offset.zero)
+    _slideUp = Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero)
         .animate(CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut));
 
     Future.delayed(const Duration(milliseconds: 60), () {
@@ -46,38 +53,35 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
     _pwCtrl.dispose();
+    _pw2Ctrl.dispose();
     _animCtrl.dispose();
     super.dispose();
   }
 
-  bool get _isValidEmail =>
-      RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(_emailCtrl.text);
-
   bool get _canSubmit =>
-      _isValidEmail && _pwCtrl.text.isNotEmpty && !_isLoading;
+      _pwCtrl.text.length >= 8 &&
+      _pwCtrl.text == _pw2Ctrl.text &&
+      !_isLoading;
 
   Future<void> _submit() async {
     if (!_canSubmit) return;
+    if (_pwCtrl.text != _pw2Ctrl.text) {
+      setState(() => _error = 'Les mots de passe ne correspondent pas.');
+      return;
+    }
     setState(() { _isLoading = true; _error = null; });
 
-    final result = await UserService().login(
-      email: _emailCtrl.text,
+    final result = await UserService().setPassword(
+      userId: widget.userId,
       password: _pwCtrl.text,
     );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
-    if (result.needsPassword) {
-      Navigator.push(context, MaterialPageRoute(
-        builder: (_) => SetPasswordScreen(
-          userId: result.userId!,
-          userName: result.userName!,
-        ),
-      ));
-    } else if (result.success) {
+    if (result.success) {
+      await UserSession.save(widget.userId);
       context.go(AppRoutes.dashboard);
     } else {
       setState(() => _error = result.error);
@@ -115,23 +119,11 @@ class _LoginScreenState extends State<LoginScreen>
             SafeArea(
               child: Column(
                 children: [
-                  // Top bar
                   Padding(
                     padding: const EdgeInsets.fromLTRB(22, 8, 22, 12),
                     child: Row(
                       children: [
-                        GestureDetector(
-                          onTap: () => context.pop(),
-                          child: Container(
-                            width: 42, height: 42,
-                            decoration: BoxDecoration(
-                              color: t.surface,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: t.border),
-                            ),
-                            child: Icon(Icons.chevron_left_rounded, color: t.text),
-                          ),
-                        ),
+                        const SizedBox(width: 42),
                         Expanded(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -167,7 +159,6 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ),
 
-                  // Content
                   Expanded(
                     child: FadeTransition(
                       opacity: _fadeIn,
@@ -178,10 +169,10 @@ class _LoginScreenState extends State<LoginScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const EyebrowLabel('Connexion'),
+                              const EyebrowLabel('Sécurité'),
                               const SizedBox(height: 8),
                               Text(
-                                'Content de te\nretrouver !',
+                                'Bonjour ${widget.userName} !',
                                 style: TextStyle(
                                   fontFamily: 'Quicksand',
                                   fontSize: 32,
@@ -193,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'Entre ton adresse mail et ton mot de passe pour accéder à ton espace.',
+                                'Pour sécuriser ton compte, choisis un mot de passe. Tu n\'auras à faire ça qu\'une seule fois.',
                                 style: TextStyle(
                                   fontFamily: 'Quicksand',
                                   fontSize: 13.5,
@@ -205,24 +196,33 @@ class _LoginScreenState extends State<LoginScreen>
                               const SizedBox(height: 28),
 
                               PoopyTextField(
-                                label: 'Adresse e-mail',
-                                placeholder: 'ton@email.fr',
-                                controller: _emailCtrl,
-                                icon: Icons.mail_outline_rounded,
-                                keyboardType: TextInputType.emailAddress,
-                                isValid: _emailCtrl.text.isEmpty ? null : _isValidEmail,
+                                label: 'Mot de passe',
+                                placeholder: '8 caractères minimum',
+                                controller: _pwCtrl,
+                                icon: Icons.lock_outline_rounded,
+                                obscureText: _obscure1,
+                                suffixIcon: GestureDetector(
+                                  onTap: () => setState(() => _obscure1 = !_obscure1),
+                                  child: Icon(
+                                    _obscure1 ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    size: 18, color: t.textDim,
+                                  ),
+                                ),
                               ),
                               const SizedBox(height: 14),
                               PoopyTextField(
-                                label: 'Mot de passe',
-                                placeholder: '••••••••',
-                                controller: _pwCtrl,
+                                label: 'Confirme le mot de passe',
+                                placeholder: 'Répète ton mot de passe',
+                                controller: _pw2Ctrl,
                                 icon: Icons.lock_outline_rounded,
-                                obscureText: _obscure,
+                                obscureText: _obscure2,
+                                isValid: _pw2Ctrl.text.isEmpty
+                                    ? null
+                                    : _pwCtrl.text == _pw2Ctrl.text,
                                 suffixIcon: GestureDetector(
-                                  onTap: () => setState(() => _obscure = !_obscure),
+                                  onTap: () => setState(() => _obscure2 = !_obscure2),
                                   child: Icon(
-                                    _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                    _obscure2 ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                                     size: 18, color: t.textDim,
                                   ),
                                 ),
@@ -260,12 +260,11 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ),
 
-                  // Submit
                   Padding(
                     padding: EdgeInsets.fromLTRB(
                         22, 16, 22, MediaQuery.of(context).padding.bottom + 20),
                     child: PoopyButton(
-                      label: _isLoading ? 'Connexion...' : 'Me connecter',
+                      label: _isLoading ? 'Enregistrement...' : 'Créer mon mot de passe',
                       onPressed: _canSubmit ? _submit : null,
                       disabled: !_canSubmit,
                       trailing: _isLoading
@@ -273,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen>
                               width: 16, height: 16,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.arrow_forward_rounded,
+                          : const Icon(Icons.check_rounded,
                               color: Colors.white, size: 18),
                     ),
                   ),

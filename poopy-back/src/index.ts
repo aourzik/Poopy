@@ -3,6 +3,7 @@ import { cors } from '@elysiajs/cors';
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
+import bcrypt from "bcryptjs";
 
 const connectionString = Bun.env.DATABASE_URL;
 if (!connectionString) {
@@ -30,8 +31,9 @@ const app = new Elysia()
             set.status = 409;
             return { error: "Un compte existe déjà avec cet email." };
           }
+          const passwordHash = await bcrypt.hash(body.password, 12);
           const user = await prisma.user.create({
-            data: { email: body.email, name: body.name, diagnosis: body.diagnosis ?? null }
+            data: { email: body.email, name: body.name, passwordHash, diagnosis: body.diagnosis ?? null }
           });
           return user;
         } catch (error) {
@@ -43,20 +45,48 @@ const app = new Elysia()
         body: t.Object({
           email: t.String({ format: 'email' }),
           name: t.String(),
+          password: t.String({ minLength: 8 }),
           diagnosis: t.Optional(t.String()),
         })
       })
 
-      .get("/login", async ({ query, set }) => {
-        const { email, name } = query;
-        if (!email) { set.status = 400; return { error: "Email requis" }; }
+      .post("/login", async ({ body, set }) => {
+        const { email, password } = body;
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) { set.status = 404; return { error: "Aucun compte trouvé avec cet email." }; }
-        if (name && user.name.toLowerCase() !== name.toLowerCase()) {
-          set.status = 401;
-          return { error: "Nom d'utilisateur incorrect." };
+
+        // Ancien compte sans mot de passe → invite à en créer un
+        if (!user.passwordHash) {
+          return { needsPassword: true, userId: user.id, name: user.name };
         }
+
+        const valid = await bcrypt.compare(password, user.passwordHash);
+        if (!valid) { set.status = 401; return { error: "Mot de passe incorrect." }; }
         return user;
+      }, {
+        body: t.Object({
+          email: t.String({ format: 'email' }),
+          password: t.String(),
+        })
+      })
+
+      .post("/:id/set-password", async ({ params, body, set }) => {
+        try {
+          const user = await prisma.user.findUnique({ where: { id: params.id } });
+          if (!user) { set.status = 404; return { error: "Utilisateur introuvable." }; }
+          const passwordHash = await bcrypt.hash(body.password, 12);
+          const updated = await prisma.user.update({
+            where: { id: params.id },
+            data: { passwordHash },
+          });
+          return updated;
+        } catch (error) {
+          console.error("❌ Erreur set-password:", error);
+          set.status = 500;
+          return { error: "Erreur lors de la mise à jour du mot de passe." };
+        }
+      }, {
+        body: t.Object({ password: t.String({ minLength: 8 }) }),
       })
 
       .get("/:id", async ({ params }) => {

@@ -11,6 +11,7 @@ model User {
   id           String        @id @default(uuid())
   email        String        @unique
   name         String
+  passwordHash String?
   diagnosis    String?       // RCH, Crohn, MICI indéterminée...
   avatarUrl    String?       // Base64 de la photo de profil
   createdAt    DateTime      @default(now())

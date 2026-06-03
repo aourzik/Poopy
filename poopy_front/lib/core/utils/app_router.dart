@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/screens/splash_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
+import '../../features/auth/screens/set_password_screen.dart';
 import '../../features/dashboard/screens/dashboard_screen.dart';
 import '../../features/journal/screens/journal_screen.dart';
 import '../../features/medications/screens/medications_screen.dart';
@@ -20,6 +21,7 @@ class AppRoutes {
   static const splash = '/';
   static const register = '/register';
   static const login = '/login';
+  static const setPassword = '/set-password';
   static const home = '/home';
   static const dashboard = '/home/dashboard';
   static const journal = '/home/journal';
@@ -56,6 +58,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             );
           },
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.setPassword,
+        pageBuilder: (context, state) {
+          final extra = state.extra as Map<String, String>;
+          return CustomTransitionPage(
+            child: SetPasswordScreen(userId: extra['userId']!, userName: extra['userName']!),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          );
+        },
       ),
       GoRoute(
         path: AppRoutes.register,

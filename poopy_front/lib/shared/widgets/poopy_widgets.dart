@@ -373,6 +373,8 @@ class PoopyTextField extends StatefulWidget {
   final IconData icon;
   final TextInputType keyboardType;
   final bool? isValid;
+  final bool obscureText;
+  final Widget? suffixIcon;
 
   const PoopyTextField({
     super.key,
@@ -382,6 +384,8 @@ class PoopyTextField extends StatefulWidget {
     required this.icon,
     this.keyboardType = TextInputType.text,
     this.isValid,
+    this.obscureText = false,
+    this.suffixIcon,
   });
 
   @override
@@ -437,6 +441,7 @@ class _PoopyTextFieldState extends State<PoopyTextField> {
                   child: TextFormField(
                     controller: widget.controller,
                     keyboardType: widget.keyboardType,
+                    obscureText: widget.obscureText,
                     style: TextStyle(
                       fontFamily: 'Quicksand', fontSize: 15,
                       fontWeight: FontWeight.w500, color: t.text,
@@ -450,7 +455,10 @@ class _PoopyTextFieldState extends State<PoopyTextField> {
                   ),
                 ),
               ),
-              if (widget.isValid == true) ...[
+              if (widget.suffixIcon != null) ...[
+                widget.suffixIcon!,
+                const SizedBox(width: 12),
+              ] else if (widget.isValid == true) ...[
                 Container(
                   width: 22, height: 22,
                   decoration: const BoxDecoration(
